@@ -3,6 +3,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
+import java.security.KeyPair;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.Scanner;
 
 /**
@@ -18,6 +21,10 @@ public class Client {
     private final boolean isConnected;
     private final String userDir;
 
+    private final PublicKey publicRSAKey;
+    private final PrivateKey privateRSAKey;
+    private final PublicKey receiverPublicRSAKey;
+
     /**
      * Constructs a Client object by specifying the port to connect to. The socket must be created before the sender can
      * send a message.
@@ -26,7 +33,7 @@ public class Client {
      *
      * @throws IOException when an I/O error occurs when creating the socket
      */
-    public Client ( int port ) throws IOException {
+    public Client ( int port ) throws Exception {
         client = new Socket ( HOST , port );
         out = new ObjectOutputStream ( client.getOutputStream ( ) );
         in = new ObjectInputStream ( client.getInputStream ( ) );
@@ -34,6 +41,10 @@ public class Client {
         // Create a temporary directory for putting the request files
         userDir = Files.createTempDirectory ( "fileServer" ).toFile ( ).getAbsolutePath ( );
         System.out.println ( "Temporary directory path " + userDir );
+        KeyPair keyPair = Encryption.generateKeyPair ( );
+        this.privateRSAKey = keyPair.getPrivate();
+        this.publicRSAKey = keyPair.getPublic();
+        this.receiverPublicRSAKey = rsaKeyDistribution();
     }
 
     /**
@@ -86,11 +97,23 @@ public class Client {
      */
     public void sendMessage ( String filePath ) throws IOException {
         // Creates the message object
-        Message messageObj = new Message ( filePath.getBytes ( ) );
+        Message messageObj = new Message ( filePath.getBytes ( ));
         // Sends the message
         out.writeObject ( messageObj );
         out.flush ( );
     }
+
+    private void sendPublicRSAKey ( ) throws IOException {
+        out.writeObject ( publicRSAKey );
+        out.flush ( );
+    }
+
+    private PublicKey rsaKeyDistribution ( ) throws Exception {
+        sendPublicRSAKey ( );
+        return ( PublicKey ) in.readObject ( );
+    }
+
+
 
     /**
      * Closes the connection by closing the socket and the streams.
