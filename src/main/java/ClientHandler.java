@@ -12,6 +12,7 @@ public class ClientHandler extends Thread {
     private final ObjectInputStream in;
     private final ObjectOutputStream out;
     private final Socket client;
+    private final Server server;
     private final boolean isConnected;
 
     /**
@@ -22,8 +23,9 @@ public class ClientHandler extends Thread {
      *
      * @throws IOException when an I/O error occurs when creating the socket
      */
-    public ClientHandler ( Socket client ) throws IOException {
+    public ClientHandler ( Socket client, Server server ) throws IOException {
         this.client = client;
+        this.server = server;
         in = new ObjectInputStream ( client.getInputStream ( ) );
         out = new ObjectOutputStream ( client.getOutputStream ( ) );
         isConnected = true; // TODO: Check if this is necessary or if it should be controlled
@@ -33,6 +35,8 @@ public class ClientHandler extends Thread {
     public void run ( ) {
         super.run ( );
         try {
+            receiveUserInfo();
+
             while ( isConnected ) {
                 // Reads the message to extract the path of the file
                 Message message = ( Message ) in.readObject ( );
@@ -60,6 +64,46 @@ public class ClientHandler extends Thread {
         Message response = new Message ( content );
         out.writeObject ( response );
         out.flush ( );
+    }
+
+    /**
+     * Sends a message to the client
+     *
+     * @param content the content of the message to send
+     *
+     * @throws IOException when an I/O error occurs when sending the file
+     */
+    private void sendMessage ( String content ) throws IOException {
+        Message response = new Message ( content.getBytes() );
+        out.writeObject ( response );
+        out.flush ( );
+    }
+
+    /**
+     * Checks if the server already has the username
+     *
+     */
+    private void receiveUserInfo() throws IOException, ClassNotFoundException {
+        Message message = ( Message ) in.readObject ( );
+        String msg = new String ( message.getMessage ( ) );
+        String[] msgSplitted = msg.split("[|]");
+        String username = msgSplitted[0];
+        String password = msgSplitted[1];
+        if(server.getClients().contains(username)){
+            String userPass = server.getPasswords().get(server.getClients().indexOf(username));
+            if (password.equals(userPass)){
+                sendMessage("loginSuccess");
+            }
+            else {
+                sendMessage("loginFailed");
+                receiveUserInfo();
+            }
+        }
+        else {
+            server.newClient(username, password);
+            sendMessage("new");
+        }
+
     }
 
 

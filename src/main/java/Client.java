@@ -20,6 +20,8 @@ public class Client {
     private final ObjectOutputStream out;
     private final boolean isConnected;
     private final String userDir;
+    private String Username;
+    private String Password;
 
     private final PublicKey publicRSAKey;
     private final PrivateKey privateRSAKey;
@@ -54,6 +56,8 @@ public class Client {
     public void execute ( ) {
         Scanner usrInput = new Scanner ( System.in );
         try {
+            while (!authenticate(usrInput));
+
             while ( isConnected ) {
                 // Reads the message to extract the path of the file
                 System.out.println ( "Write the path of the file" );
@@ -65,11 +69,47 @@ public class Client {
             }
             // Close connection
             closeConnection ( );
-        } catch ( IOException e ) {
+        } catch (IOException | ClassNotFoundException e ) {
             throw new RuntimeException ( e );
         }
         // Close connection
         closeConnection ( );
+    }
+
+    /**
+     * Asks for the credentials (Username and Password) and sends them to the server, receiving confirmation of success
+     *
+     * @param usrInput Scanner for the user input
+     *
+     * @throws IOException if an I/O error occurs when opening the socket
+     * @throws ClassNotFoundException if the class of the object to be read is not found
+     */
+    private boolean authenticate(Scanner usrInput) throws IOException, ClassNotFoundException {
+        String response = "";
+
+        //Gets username and password (new or existing one)
+        System.out.println("Username: ");
+        String username = usrInput.nextLine();
+        System.out.println("Password: ");
+        String password = usrInput.nextLine();
+
+        //Concatenates username and password in a string to be sent to the server and sends
+        String msg = username + "|" + password;
+        sendMessage(msg);
+
+        //Receives the server message to check if the authentication succeeded
+        Message message = ( Message ) in.readObject ( );
+        response = new String(message.getMessage());
+        if(response.equals("loginFailed")){
+            System.out.println("The username already exists, but the password is incorrect");
+            return false;
+        }
+        else {
+            Username = username;
+            Password = password;
+            System.out.println("Welcome, " + username);
+            return true;
+        }
     }
 
     /**
@@ -88,16 +128,16 @@ public class Client {
     }
 
     /**
-     * Sends the path of the file to the server using the OutputStream of the socket. The message is sent as an object
+     * Sends a message to the server using the OutputStream of the socket. The message is sent as an object
      * of the {@link Message} class.
      *
-     * @param filePath the message to send
+     * @param message the message to send
      *
      * @throws IOException when an I/O error occurs when sending the message
      */
-    public void sendMessage ( String filePath ) throws IOException {
+    public void sendMessage ( String message ) throws IOException {
         // Creates the message object
-        Message messageObj = new Message ( filePath.getBytes ( ));
+        Message messageObj = new Message ( message.getBytes ( ) );
         // Sends the message
         out.writeObject ( messageObj );
         out.flush ( );

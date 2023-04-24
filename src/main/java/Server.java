@@ -6,17 +6,22 @@ import java.net.Socket;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.ArrayList;
 
 /**
  * This class represents a server that receives a message from the clients. The server is implemented as a thread. Each
  * time a client connects to the server, a new thread is created to handle the communication with the client.
  */
 public class Server implements Runnable {
+
     public static final String FILE_PATH = "server/files";
     private final ServerSocket server;
     private final boolean isConnected;
     private final PrivateKey privateRSAKey;
     private final PublicKey publicRSAKey;
+    private ArrayList<String> clients;
+    private ArrayList<String> passwords;
+    private int[] sessions;
 
 
     /**
@@ -33,6 +38,22 @@ public class Server implements Runnable {
         KeyPair keyPair = Encryption.generateKeyPair();
         this.privateRSAKey = keyPair.getPrivate();
         this.publicRSAKey = keyPair.getPublic();
+        clients = new ArrayList<>();
+        passwords = new ArrayList<>();
+    }
+
+    public ArrayList<String> getClients() {
+        return clients;
+    }
+
+    public ArrayList<String> getPasswords() {
+        return passwords;
+    }
+
+    public void newClient(String client, String password) {
+        clients.add(client);
+        passwords.add(password);
+        sessions[clients.indexOf(client)] = 1;
     }
 
     @Override
@@ -59,7 +80,7 @@ public class Server implements Runnable {
      * @throws IOException if an I/O error occurs when reading stream header
      */
     private void process ( Socket client ) throws IOException {
-        ClientHandler clientHandler = new ClientHandler ( client );
+        ClientHandler clientHandler = new ClientHandler ( client, this );
         clientHandler.start ( );
     }
 
