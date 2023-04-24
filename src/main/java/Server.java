@@ -38,9 +38,7 @@ public class Server implements Runnable {
     @Override
     public void run ( ) {
         try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter("pki/public_keys/serverPUk.key"));
-            writer.write(publicRSAKey.toString());
-            writer.close();
+            sendPUkToFile();
 
             while ( isConnected ) {
                 Socket client = server.accept ( );
@@ -74,4 +72,16 @@ public class Server implements Runnable {
         }
     }
 
+    /**
+     * Send the server's public key to the public key folder
+     */
+    public void sendPUkToFile(){
+        try {
+            BufferedWriter writer = new BufferedWriter(new FileWriter("pki/public_keys/serverPUk.key"));
+            writer.write(publicRSAKey.toString());
+            writer.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
