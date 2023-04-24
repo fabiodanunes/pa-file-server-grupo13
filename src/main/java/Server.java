@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 
 /**
  * This class represents a server that receives a message from the clients. The server is implemented as a thread. Each
@@ -13,6 +14,10 @@ public class Server implements Runnable {
     private final ServerSocket server;
     private final boolean isConnected;
 
+    private ArrayList<String> clients;
+    private ArrayList<String> passwords;
+    private int[] sessions;
+
     /**
      * Constructs a Server object by specifying the port number. The server will be then created on the specified port.
      * The server will be accepting connections from all local addresses.
@@ -24,6 +29,22 @@ public class Server implements Runnable {
     public Server ( int port ) throws IOException {
         server = new ServerSocket ( port );
         isConnected = true; // TODO: Check if this is necessary or if it should be controlled
+        clients = new ArrayList<>();
+        passwords = new ArrayList<>();
+    }
+
+    public ArrayList<String> getClients() {
+        return clients;
+    }
+
+    public ArrayList<String> getPasswords() {
+        return passwords;
+    }
+
+    public void newClient(String client, String password) {
+        clients.add(client);
+        passwords.add(password);
+        sessions[clients.indexOf(client)] = 1;
     }
 
     @Override
@@ -46,7 +67,7 @@ public class Server implements Runnable {
      * @throws IOException if an I/O error occurs when reading stream header
      */
     private void process ( Socket client ) throws IOException {
-        ClientHandler clientHandler = new ClientHandler ( client );
+        ClientHandler clientHandler = new ClientHandler ( client, this );
         clientHandler.start ( );
     }
 
