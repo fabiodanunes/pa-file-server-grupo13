@@ -46,6 +46,42 @@ public class Client {
         this.privateRSAKey = keyPair.getPrivate();
         this.publicRSAKey = keyPair.getPublic();
         receiverPublicRSAKey = rsaKeyDistribution();
+}
+
+    /**
+     * Gets the username of the client
+     *
+     *@return Username
+     */
+    public String getUsername() {
+        return Username;
+    }
+
+    /**
+     * Gets the password of the client
+     *
+     *@return Password
+     */
+    public String getPassword() {
+        return Password;
+    }
+
+    /**
+     * Gets the public RSA key of the client
+     *
+     *@return the publicRSAKey
+     */
+    public PublicKey getPublicRSAKey() {
+        return publicRSAKey;
+    }
+
+    /**
+     * Gets the private RSA key of the client
+     *
+     *@return the privateRSAKey
+     */
+    public PrivateKey getPrivateRSAKey() {
+        return privateRSAKey;
     }
 
     /**
@@ -57,6 +93,9 @@ public class Client {
         try {
             DHRSA();
             while (!authenticate(usrInput));
+
+            PrivateKeyToFile();
+            PublicKeyToFile();
 
             while ( isConnected ) {
                 // Reads the message to extract the path of the file
@@ -158,6 +197,9 @@ public class Client {
         out.flush();
     }
 
+    /**
+     * Send his publicRSAKey to the server to establish a key swap to a future communication
+     * */
     private void sendPublicRSAKey ( ) throws IOException {
         out.writeObject ( publicRSAKey );
         out.flush ( );
@@ -198,4 +240,39 @@ public class Client {
     private void sendPublicDHKey(byte[] publicKey) throws Exception{
         out.writeObject(publicKey);
     }
+    /**
+     *
+     * Save the private key generated in the file including the username + name the file
+     * It is generated his own folder to save his private key
+     *
+     * */
+    public void PrivateKeyToFile() throws IOException {
+
+        String caminhoAtual = new File("").getAbsolutePath();
+        String NovaPasta = caminhoAtual + "/"+ getUsername() + "/private";
+        File file = new File(NovaPasta);
+        file.mkdirs();
+
+        try {
+            BufferedWriter writer = new BufferedWriter(new FileWriter(NovaPasta +"/"+ getUsername() +"PRk.key"));
+            writer.write(getPrivateRSAKey().toString());
+            writer.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Save the public key in his respective folder including the username on the filename
+     * */
+    public void PublicKeyToFile(){
+        try {
+            BufferedWriter writer = new BufferedWriter(new FileWriter("pki/public_keys/"+ getUsername() +"PUk.key"));
+            writer.write(getPublicRSAKey().toString());
+            writer.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }
