@@ -25,7 +25,7 @@ public class Client {
 
     private final PublicKey publicRSAKey;
     private final PrivateKey privateRSAKey;
-    private final PublicKey receiverPublicRSAKey;
+    private PublicKey receiverPublicRSAKey;
 
     /**
      * Constructs a Client object by specifying the port to connect to. The socket must be created before the sender can
@@ -46,7 +46,7 @@ public class Client {
         KeyPair keyPair = Encryption.generateKeyPair ( );
         this.privateRSAKey = keyPair.getPrivate();
         this.publicRSAKey = keyPair.getPublic();
-        this.receiverPublicRSAKey = rsaKeyDistribution();
+        receiverPublicRSAKey = rsaKeyDistribution();
     }
 
     /**
@@ -56,6 +56,7 @@ public class Client {
     public void execute ( ) {
         Scanner usrInput = new Scanner ( System.in );
         try {
+
             while (!authenticate(usrInput));
 
             while ( isConnected ) {
@@ -69,7 +70,7 @@ public class Client {
             }
             // Close connection
             closeConnection ( );
-        } catch (IOException | ClassNotFoundException e ) {
+        } catch (Exception e ) {
             throw new RuntimeException ( e );
         }
         // Close connection
@@ -84,7 +85,7 @@ public class Client {
      * @throws IOException if an I/O error occurs when opening the socket
      * @throws ClassNotFoundException if the class of the object to be read is not found
      */
-    private boolean authenticate(Scanner usrInput) throws IOException, ClassNotFoundException {
+    private boolean authenticate(Scanner usrInput) throws Exception {
         String response = "";
 
         //Gets username and password (new or existing one)

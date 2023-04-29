@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.security.PublicKey;
 
 /**
  * This class represents the client handler. It handles the communication with the client. It reads the file from the
@@ -13,6 +14,7 @@ public class ClientHandler extends Thread {
     private final ObjectOutputStream out;
     private final Socket client;
     private final Server server;
+    private final PublicKey publicRSAKey;
     private final boolean isConnected;
 
     /**
@@ -23,9 +25,10 @@ public class ClientHandler extends Thread {
      *
      * @throws IOException when an I/O error occurs when creating the socket
      */
-    public ClientHandler ( Socket client, Server server ) throws IOException {
+    public ClientHandler ( Socket client, PublicKey publicRSAKey, Server server ) throws IOException {
         this.client = client;
         this.server = server;
+        this.publicRSAKey = publicRSAKey;
         in = new ObjectInputStream ( client.getInputStream ( ) );
         out = new ObjectOutputStream ( client.getOutputStream ( ) );
         isConnected = true; // TODO: Check if this is necessary or if it should be controlled
@@ -35,6 +38,9 @@ public class ClientHandler extends Thread {
     public void run ( ) {
         super.run ( );
         try {
+            // Perform key distribution
+            PublicKey senderPublicRSAKey = rsaKeyDistribution ( in );
+
             receiveUserInfo();
 
             while ( isConnected ) {
@@ -47,10 +53,38 @@ public class ClientHandler extends Thread {
             }
             // Close connection
             closeConnection ( );
-        } catch ( IOException | ClassNotFoundException e ) {
+        } catch ( Exception e ) {
             // Close connection
             closeConnection ( );
         }
+    }
+
+    /**
+     * Executes the key distribution protocol. The receiver will receive the public key of the sender and will send its
+     * own public key.
+     *
+     * @param in the input stream
+     *
+     * @return the public key of the sender
+     *
+     * @throws Exception when the key distribution protocol fails
+     */
+    private PublicKey rsaKeyDistribution(ObjectInputStream in) throws Exception {
+        // Extract the public key
+        PublicKey senderPublicRSAKey = ( PublicKey ) in.readObject ( );
+        // Send the public key
+        sendPublicRSAKey ( );
+        return senderPublicRSAKey;
+    }
+
+    /**
+     * Sends the public key of the receiver to the sender.
+     *
+     * @throws IOException when an I/O error occurs when sending the public key
+     */
+    private void sendPublicRSAKey ( ) throws IOException {
+        out.writeObject ( publicRSAKey );
+        out.flush ( );
     }
 
     /**
@@ -80,7 +114,7 @@ public class ClientHandler extends Thread {
     }
 
     /**
-     * Checks if the server already has the username
+     * Checks if the login or register information is valid, by validating the username and password given
      *
      */
     private void receiveUserInfo() throws IOException, ClassNotFoundException {
