@@ -1,6 +1,5 @@
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
+import java.math.BigInteger;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.security.KeyPair;
@@ -56,7 +55,7 @@ public class Client {
     public void execute ( ) {
         Scanner usrInput = new Scanner ( System.in );
         try {
-
+            DHRSA();
             while (!authenticate(usrInput));
 
             while ( isConnected ) {
@@ -77,6 +76,19 @@ public class Client {
         closeConnection ( );
     }
 
+    public void DHRSA() throws Exception {
+        // Agree on shared secret
+        BigInteger sharedSecret = AgreeOnSharedSecret(receiverPublicRSAKey);
+        // Encrypts the message
+        byte[] encryptedMessage = Encryption.EncryptMessage(publicRSAKey.toString().getBytes(), sharedSecret.toByteArray());
+        // Gererates the MAC
+        byte[] digest = Integrity.generateDigest(publicRSAKey.toString().getBytes());
+        // creates message obj
+        Message message = new Message(encryptedMessage, digest);
+        // Sends the encrypted message
+        out.writeObject(message);
+    }
+
     /**
      * Asks for the credentials (Username and Password) and sends them to the server, receiving confirmation of success
      *
@@ -85,7 +97,7 @@ public class Client {
      * @throws IOException if an I/O error occurs when opening the socket
      * @throws ClassNotFoundException if the class of the object to be read is not found
      */
-    private boolean authenticate(Scanner usrInput) throws Exception {
+    private boolean authenticate(Scanner usrInput) throws Exception{
         String response = "";
 
         //Gets username and password (new or existing one)
@@ -99,7 +111,7 @@ public class Client {
         sendMessage(msg);
 
         //Receives the server message to check if the authentication succeeded
-        Message message = ( Message ) in.readObject ( );
+        Message message = (Message) in.readObject();
         response = new String(message.getMessage());
         if(response.equals("loginFailed")){
             System.out.println("The username already exists, but the password is incorrect");
@@ -136,12 +148,14 @@ public class Client {
      *
      * @throws IOException when an I/O error occurs when sending the message
      */
-    public void sendMessage ( String message ) throws IOException {
-        // Creates the message object
-        Message messageObj = new Message ( message.getBytes ( ) );
+    public void sendMessage ( String message ) throws Exception {
+        // Creates the MAC message object
+        byte[] digest = Integrity.generateDigest(message.getBytes());
+        Message messageObj = new Message(message.getBytes(), digest);
+
         // Sends the message
-        out.writeObject ( messageObj );
-        out.flush ( );
+        out.writeObject(messageObj);
+        out.flush();
     }
 
     private void sendPublicRSAKey ( ) throws IOException {
@@ -169,4 +183,19 @@ public class Client {
         }
     }
 
+    private BigInteger AgreeOnSharedSecret(PublicKey receiverPublicRSAKey) throws Exception{
+        // Generates a private key
+        BigInteger privateDHKey = DiffieHellman.generatePrivateKey();
+        BigInteger publicDHKey = DiffieHellman.generatePublicKey(privateDHKey);
+        // Sends the public key to the server encrypted
+        sendPublicDHKey(Encryption.encryptRSA(publicDHKey.toByteArray(), privateRSAKey));
+        // Waits for the server to send his public key
+        BigInteger serverPublicKey = new BigInteger(Encryption.decryptRSA((byte[]) in.readObject(), receiverPublicRSAKey));
+        // Generates the shared secret
+        return DiffieHellman.computePrivateKey(serverPublicKey, privateDHKey);
+    }
+
+    private void sendPublicDHKey(byte[] publicKey) throws Exception{
+        out.writeObject(publicKey);
+    }
 }
