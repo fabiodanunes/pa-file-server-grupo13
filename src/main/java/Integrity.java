@@ -2,7 +2,7 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 
 public class Integrity {
-    private static final String DIGEST_ALGORITHM = "SHA-512";
+    private static final String DIGEST_ALGORITHM = "HmacSHA256";
 
     /**
      * Computes the message digest of the given message.
