@@ -45,6 +45,14 @@ public class Server implements Runnable {
         sessions = new int[MAX_CLIENTS];
     }
 
+    public PublicKey getPublicRSAKey() {
+        return publicRSAKey;
+    }
+
+    public PrivateKey getPrivateRSAKey() {
+        return privateRSAKey;
+    }
+
     public ArrayList<String> getClients() {
         return clients;
     }

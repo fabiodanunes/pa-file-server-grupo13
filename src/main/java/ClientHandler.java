@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.math.BigInteger;
 import java.net.Socket;
 import java.security.PublicKey;
 
@@ -9,7 +10,6 @@ import java.security.PublicKey;
  * server and sends it to the client.
  */
 public class ClientHandler extends Thread {
-
     private final ObjectInputStream in;
     private final ObjectOutputStream out;
     private final Socket client;
@@ -38,9 +38,7 @@ public class ClientHandler extends Thread {
     public void run ( ) {
         super.run ( );
         try {
-            // Perform key distribution
-            PublicKey senderPublicRSAKey = rsaKeyDistribution ( in );
-
+            DHRSA();
             receiveUserInfo();
 
             while ( isConnected ) {
@@ -53,10 +51,29 @@ public class ClientHandler extends Thread {
             }
             // Close connection
             closeConnection ( );
-        } catch ( Exception e ) {
+        } catch (Exception e ) {
             // Close connection
             closeConnection ( );
         }
+    }
+
+    public void DHRSA() throws Exception {
+        // Perform key distribution
+        PublicKey senderPublicRSAKey = rsaKeyDistribution ( in );
+
+        // Agree on a shared secret
+        BigInteger sharedSecret = AgreeOnSharedSecret(senderPublicRSAKey);
+        // Reads the message object
+        Message messageObj = (Message) in.readObject();
+        // Extracts and decrypt the message
+        byte[] decryptedMessage = Encryption.DecryptMessage(messageObj.getMessage(), sharedSecret.toByteArray());
+        // Computes the digest of the received message
+        byte[] computedDigest = Integrity.generateDigest(decryptedMessage);
+        // Verifies the integrity of the message
+        if(!Integrity.verifyDigest(messageObj.getSignature(), computedDigest)){
+            throw new RuntimeException("The integrity of the message is not verified");
+        }
+        System.out.println(new String(decryptedMessage));
     }
 
     /**
@@ -94,8 +111,9 @@ public class ClientHandler extends Thread {
      *
      * @throws IOException when an I/O error occurs when sending the file
      */
-    private void sendFile ( byte[] content ) throws IOException {
-        Message response = new Message ( content );
+    private void sendFile ( byte[] content ) throws Exception {
+        byte[] digest = Integrity.generateDigest(content);
+        Message response = new Message(content, digest);
         out.writeObject ( response );
         out.flush ( );
     }
@@ -107,17 +125,18 @@ public class ClientHandler extends Thread {
      *
      * @throws IOException when an I/O error occurs when sending the file
      */
-    private void sendMessage ( String content ) throws IOException {
-        Message response = new Message ( content.getBytes() );
-        out.writeObject ( response );
-        out.flush ( );
+    private void sendMessage ( String content ) throws Exception {
+        byte[] digest = Integrity.generateDigest (content.getBytes());
+        Message response = new Message(content.getBytes(), digest);
+        out.writeObject(response);
+        out.flush();
     }
 
     /**
      * Checks if the login or register information is valid, by validating the username and password given
      *
      */
-    private void receiveUserInfo() throws IOException, ClassNotFoundException {
+    private void receiveUserInfo() throws Exception {
         Message message = ( Message ) in.readObject ( );
         String msg = new String ( message.getMessage ( ) );
         String[] msgSplitted = msg.split("[|]");
@@ -126,10 +145,10 @@ public class ClientHandler extends Thread {
         if(server.getClients().contains(username)){
             String userPass = server.getPasswords().get(server.getClients().indexOf(username));
             if (password.equals(userPass)){
-                sendMessage("loginSuccess");
+                sendMessage("login Success");
             }
             else {
-                sendMessage("loginFailed");
+                sendMessage("login Failed");
                 receiveUserInfo();
             }
         }
@@ -139,7 +158,6 @@ public class ClientHandler extends Thread {
         }
 
     }
-
 
     /**
      * Closes the connection by closing the socket and the streams.
@@ -154,4 +172,19 @@ public class ClientHandler extends Thread {
         }
     }
 
+    private BigInteger AgreeOnSharedSecret(PublicKey senderPublicRSAKey) throws Exception {
+        // Generate a pair of keys
+        BigInteger privateKey = DiffieHellman.generatePrivateKey();
+        BigInteger publicKey = DiffieHellman.generatePublicKey(privateKey);
+        // Extracts the public key from the request
+        BigInteger clientPublicKey = new BigInteger(Encryption.decryptRSA((byte[]) in.readObject(), senderPublicRSAKey));
+        // Send the public key to the client
+        sendPublicDHKey(publicKey);
+        // Generates the shared secret
+        return DiffieHellman.computePrivateKey(clientPublicKey, privateKey);
+    }
+
+    private void sendPublicDHKey(BigInteger publicKey) throws Exception {
+        out.writeObject(Encryption.encryptRSA(publicKey.toByteArray(), server.getPrivateRSAKey()));
+    }
 }
