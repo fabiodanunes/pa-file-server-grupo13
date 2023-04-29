@@ -19,6 +19,8 @@ public class Server implements Runnable {
     private final boolean isConnected;
     private final PrivateKey privateRSAKey;
     private final PublicKey publicRSAKey;
+
+    private final int MAX_CLIENTS = 10;
     private ArrayList<String> clients;
     private ArrayList<String> passwords;
     private int[] sessions;
@@ -40,6 +42,7 @@ public class Server implements Runnable {
         this.publicRSAKey = keyPair.getPublic();
         clients = new ArrayList<>();
         passwords = new ArrayList<>();
+        sessions = new int[MAX_CLIENTS];
     }
 
     public ArrayList<String> getClients() {
@@ -78,7 +81,7 @@ public class Server implements Runnable {
      * @throws IOException if an I/O error occurs when reading stream header
      */
     private void process ( Socket client ) throws IOException {
-        ClientHandler clientHandler = new ClientHandler ( client, this );
+        ClientHandler clientHandler = new ClientHandler ( client, publicRSAKey, this );
         clientHandler.start ( );
     }
 
