@@ -183,6 +183,14 @@ public class Client {
         }
     }
 
+    /**
+     * Decrypts the message sent by the server
+     *
+     * @return the decrypted message in bytes
+     *
+     * @throws Exception when an I/O errors occurs or when an end of file or end of stream is reached unexpectedly
+     * during input
+     */
     public byte[] DecryptReceivedMessage() throws Exception {
         // Reads the encrypted message
         Message message = (Message) in.readObject();
@@ -219,12 +227,22 @@ public class Client {
 
     /**
      * Send his publicRSAKey to the server to establish a key swap to a future communication
+     *
+     * @throws IOException when an I/O error occurs when sending the message
      * */
     private void sendPublicRSAKey() throws IOException{
         out.writeObject(publicRSAKey);
         out.flush ( );
     }
 
+    /**
+     * Executes the key distribution protocol. The client sends its public key to the server and receives the public
+     * key of the server.
+     *
+     * @return the public key of the client
+     *
+     * @throws Exception when the key distribution protocol fails
+     */
     private PublicKey rsaKeyDistribution ( ) throws Exception {
         sendPublicRSAKey ( );
         return ( PublicKey ) in.readObject ( );
@@ -243,11 +261,26 @@ public class Client {
         }
     }
 
+    /**
+     * Performs the Diffie-Hellman algorithm to secure a shared secret key to secure communication between the client
+     * and the server
+     *
+     * @throws Exception in case the AgreeOnSharedSecret() method throws an excpetion
+     */
     public void DHRSA() throws Exception {
         BigInteger sharedSecret = AgreeOnSharedSecret(receiverPublicRSAKey);
         setSharedSecret(sharedSecret);
     }
 
+    /**
+     * Performs the Diffie-Hellman algorithm to agree on a shared private key.
+     *
+     * @param receiverPublicRSAKey the public key of the server
+     *
+     * @return the shared private key
+     *
+     * @throws Exception when the Diffie-Hellman algorithm fails
+     */
     private BigInteger AgreeOnSharedSecret(PublicKey receiverPublicRSAKey) throws Exception{
         // Generates a private key
         BigInteger privateDHKey = DiffieHellman.generatePrivateKey();
@@ -260,6 +293,13 @@ public class Client {
         return DiffieHellman.computePrivateKey(serverPublicKey, privateDHKey);
     }
 
+    /**
+     * Sends the public key to the server.
+     *
+     * @param publicKey the public key to send
+     *
+     * @throws Exception when the public key cannot be sent
+     */
     private void sendPublicDHKey(byte[] publicKey) throws Exception{
         out.writeObject(publicKey);
     }
@@ -268,7 +308,7 @@ public class Client {
      * Save the private key generated in the file including the username + name the file
      * It is generated his own folder to save his private key
      * */
-    public void PrivateKeyToFile() throws IOException {
+    public void PrivateKeyToFile(){
 
         String caminhoAtual = new File("").getAbsolutePath();
         String NovaPasta = caminhoAtual + "/"+ getUsername() + "/private";

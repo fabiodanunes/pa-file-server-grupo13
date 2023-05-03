@@ -45,18 +45,38 @@ public class Server implements Runnable {
         sessions = new int[MAX_CLIENTS];
     }
 
+    /**
+     * Gets the public RSA key from the server
+     *
+     * @return the public RSA key
+     */
     public PublicKey getPublicRSAKey() {
         return publicRSAKey;
     }
 
+    /**
+     * Gets the private RSA key from the server
+     *
+     * @return the private RSA key
+     */
     public PrivateKey getPrivateRSAKey() {
         return privateRSAKey;
     }
 
+    /**
+     * Gets the list of clients
+     *
+     * @return list of clients
+     */
     public ArrayList<String> getClients() {
         return clients;
     }
 
+    /**
+     * Gets the list of passwords from the clients
+     *
+     * @return the list of passwords
+     */
     public ArrayList<String> getPasswords() {
         return passwords;
     }
@@ -89,7 +109,7 @@ public class Server implements Runnable {
      * @throws IOException if an I/O error occurs when reading stream header
      */
     private void process ( Socket client ) throws IOException {
-        ClientHandler clientHandler = new ClientHandler ( client, publicRSAKey, this );
+        ClientHandler clientHandler = new ClientHandler ( client, getPublicRSAKey(), this );
         clientHandler.start ( );
     }
 
@@ -110,7 +130,7 @@ public class Server implements Runnable {
     public void sendPUkToFile(){
         try {
             BufferedWriter writer = new BufferedWriter(new FileWriter("pki/public_keys/serverPUk.key"));
-            writer.write(publicRSAKey.toString());
+            writer.write(getPublicRSAKey().toString());
             writer.close();
         } catch (Exception e) {
             e.printStackTrace();

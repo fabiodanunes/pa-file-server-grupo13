@@ -78,7 +78,7 @@ public class ClientHandler extends Thread {
     }
 
     /**
-     * Sends the public key of the receiver to the sender.
+     * Sends the public key of the receiver to the sender
      *
      * @throws IOException when an I/O error occurs when sending the public key
      */
@@ -96,7 +96,7 @@ public class ClientHandler extends Thread {
      */
     private void sendFile(byte[] content) throws Exception{
         // Encrypts the message
-        byte[] encryptedContent = Encryption.EncryptMessage(content, sharedSecret.toByteArray());
+        byte[] encryptedContent = Encryption.EncryptMessage(content, getSharedSecret().toByteArray());
         // Creates the MAC message object
         byte[] digest = Integrity.generateDigest(content);
         // Creates the message object
@@ -115,7 +115,7 @@ public class ClientHandler extends Thread {
      */
     private void sendMessage(String content) throws Exception{
         // Encrypts the message
-        byte[] encryptedContent = Encryption.EncryptMessage(content.getBytes(), sharedSecret.toByteArray());
+        byte[] encryptedContent = Encryption.EncryptMessage(content.getBytes(), getSharedSecret().toByteArray());
         // Creates the MAC message object
         byte[] digest = Integrity.generateDigest(content.getBytes());
         // Creates the message object
@@ -127,7 +127,6 @@ public class ClientHandler extends Thread {
 
     /**
      * Checks if the login or register information is valid, by validating the username and password given
-     *
      */
     private void receiveUserInfo() throws Exception {
         String msg = new String(DecryptReceivedMessage());
@@ -151,11 +150,19 @@ public class ClientHandler extends Thread {
 
     }
 
+    /**
+     * Decrypts the message sent by the client
+     *
+     * @return the decrypted message in bytes
+     *
+     * @throws Exception when an I/O errors occurs or when an end of file or end of stream is reached unexpectedly
+     * during input
+     */
     public byte[] DecryptReceivedMessage() throws Exception {
         // Reads the encrypted message
         Message message = (Message) in.readObject();
         // Decrypts the received message
-        byte[] decryptedMessage = Encryption.DecryptMessage(message.getMessage(), sharedSecret.toByteArray());
+        byte[] decryptedMessage = Encryption.DecryptMessage(message.getMessage(), getSharedSecret().toByteArray());
         // Verifies the integrity of the message
         byte[] computedDigest = Integrity.generateDigest(decryptedMessage);
         if (!Integrity.verifyDigest(message.getSignature(), computedDigest)){
@@ -166,7 +173,7 @@ public class ClientHandler extends Thread {
     }
 
     /**
-     * Closes the connection by closing the socket and the streams.
+     * Closes the connection by closing the socket and the streams
      */
     private void closeConnection ( ) {
         try {
@@ -178,6 +185,12 @@ public class ClientHandler extends Thread {
         }
     }
 
+    /**
+     * receives the RSA public key from the client and Performs the Diffie-Hellman algorithm to secure a shared secret
+     * key to secure communication between the client and the server
+     *
+     * @throws Exception in case the AgreeOnSharedSecret() method throws an excpetion
+     */
     public void DHRSA() throws Exception {
         // Perform key distribution
         PublicKey senderPublicRSAKey = rsaKeyDistribution(in);
@@ -187,12 +200,12 @@ public class ClientHandler extends Thread {
     }
 
     /**
-     * Executes the key distribution protocol. The receiver will receive the public key of the sender and will send its
-     * own public key.
+     * Executes the key distribution protocol. The server will receive the public key of the client and will send its
+     * own public key
      *
      * @param in the input stream
      *
-     * @return the public key of the sender
+     * @return the public key of the client
      *
      * @throws Exception when the key distribution protocol fails
      */
@@ -204,6 +217,15 @@ public class ClientHandler extends Thread {
         return senderPublicRSAKey;
     }
 
+    /**
+     * Performs the Diffie-Hellman algorithm to agree on a shared private key
+     *
+     * @param senderPublicRSAKey the public key of the client
+     *
+     * @return the shared secret key
+     *
+     * @throws Exception when the key agreement protocol fails
+     */
     private BigInteger AgreeOnSharedSecret(PublicKey senderPublicRSAKey) throws Exception {
         // Generate a pair of keys
         BigInteger privateKey = DiffieHellman.generatePrivateKey();
@@ -216,6 +238,13 @@ public class ClientHandler extends Thread {
         return DiffieHellman.computePrivateKey(clientPublicKey, privateKey);
     }
 
+    /**
+     * Sends the public key to the client
+     *
+     * @param publicKey the public key to be sent
+     *
+     * @throws Exception when the public key cannot be sent
+     */
     private void sendPublicDHKey(BigInteger publicKey) throws Exception {
         out.writeObject(Encryption.encryptRSA(publicKey.toByteArray(), server.getPrivateRSAKey()));
     }
