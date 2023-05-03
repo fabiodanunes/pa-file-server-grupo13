@@ -26,6 +26,11 @@ public class Message implements Serializable {
         return message;
     }
 
+    /**
+     * Gets the signature string.
+     *
+     * @return the message string
+     */
     public byte[] getSignature() {
         return signature;
     }
