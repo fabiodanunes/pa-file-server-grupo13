@@ -16,6 +16,7 @@ public class ClientHandler extends Thread {
     private final Server server;
     private final PublicKey publicRSAKey;
     private final boolean isConnected;
+    private BigInteger sharedSecret;
 
     /**
      * Creates a ClientHandler object by specifying the socket to communicate with the client. All the processing is
@@ -34,6 +35,24 @@ public class ClientHandler extends Thread {
         isConnected = true; // TODO: Check if this is necessary or if it should be controlled
     }
 
+    /**
+     * Gets the shared secret
+     *
+     * @return the value of the shared secret
+     */
+    public BigInteger getSharedSecret() {
+        return sharedSecret;
+    }
+
+    /**
+     * Sets the shared secret
+     *
+     * @param sh the value of the shared secret
+     */
+    public void setSharedSecret(BigInteger sh) {
+        this.sharedSecret = sh;
+    }
+
     @Override
     public void run ( ) {
         super.run ( );
@@ -42,56 +61,20 @@ public class ClientHandler extends Thread {
             receiveUserInfo();
 
             while ( isConnected ) {
-                // Reads the message to extract the path of the file
-                Message message = ( Message ) in.readObject ( );
-                String request = new String ( message.getMessage ( ) );
+                byte[] decryptedMessage = DecryptReceivedMessage();
+                String request = new String(decryptedMessage);
+
                 // Reads the file and sends it to the client
-                byte[] content = FileHandler.readFile ( RequestUtils.getAbsoluteFilePath ( request ) );
-                sendFile ( content );
+                byte[] content = FileHandler.readFile(RequestUtils.getAbsoluteFilePath(request));
+                sendFile(content);
             }
+
             // Close connection
             closeConnection ( );
         } catch (Exception e ) {
             // Close connection
             closeConnection ( );
         }
-    }
-
-    public void DHRSA() throws Exception {
-        // Perform key distribution
-        PublicKey senderPublicRSAKey = rsaKeyDistribution ( in );
-
-        // Agree on a shared secret
-        BigInteger sharedSecret = AgreeOnSharedSecret(senderPublicRSAKey);
-        // Reads the message object
-        Message messageObj = (Message) in.readObject();
-        // Extracts and decrypt the message
-        byte[] decryptedMessage = Encryption.DecryptMessage(messageObj.getMessage(), sharedSecret.toByteArray());
-        // Computes the digest of the received message
-        byte[] computedDigest = Integrity.generateDigest(decryptedMessage);
-        // Verifies the integrity of the message
-        if(!Integrity.verifyDigest(messageObj.getSignature(), computedDigest)){
-            throw new RuntimeException("The integrity of the message is not verified");
-        }
-        System.out.println(new String(decryptedMessage));
-    }
-
-    /**
-     * Executes the key distribution protocol. The receiver will receive the public key of the sender and will send its
-     * own public key.
-     *
-     * @param in the input stream
-     *
-     * @return the public key of the sender
-     *
-     * @throws Exception when the key distribution protocol fails
-     */
-    private PublicKey rsaKeyDistribution(ObjectInputStream in) throws Exception {
-        // Extract the public key
-        PublicKey senderPublicRSAKey = ( PublicKey ) in.readObject ( );
-        // Send the public key
-        sendPublicRSAKey ( );
-        return senderPublicRSAKey;
     }
 
     /**
@@ -111,11 +94,16 @@ public class ClientHandler extends Thread {
      *
      * @throws IOException when an I/O error occurs when sending the file
      */
-    private void sendFile ( byte[] content ) throws Exception {
+    private void sendFile(byte[] content) throws Exception{
+        // Encrypts the message
+        byte[] encryptedContent = Encryption.EncryptMessage(content, sharedSecret.toByteArray());
+        // Creates the MAC message object
         byte[] digest = Integrity.generateDigest(content);
-        Message response = new Message(content, digest);
-        out.writeObject ( response );
-        out.flush ( );
+        // Creates the message object
+        Message messageObj = new Message(encryptedContent, digest);
+        // Sends the message
+        out.writeObject(messageObj);
+        out.flush();
     }
 
     /**
@@ -125,10 +113,15 @@ public class ClientHandler extends Thread {
      *
      * @throws IOException when an I/O error occurs when sending the file
      */
-    private void sendMessage ( String content ) throws Exception {
-        byte[] digest = Integrity.generateDigest (content.getBytes());
-        Message response = new Message(content.getBytes(), digest);
-        out.writeObject(response);
+    private void sendMessage(String content) throws Exception{
+        // Encrypts the message
+        byte[] encryptedContent = Encryption.EncryptMessage(content.getBytes(), sharedSecret.toByteArray());
+        // Creates the MAC message object
+        byte[] digest = Integrity.generateDigest(content.getBytes());
+        // Creates the message object
+        Message messageObj = new Message(encryptedContent, digest);
+        // Sends the message
+        out.writeObject(messageObj);
         out.flush();
     }
 
@@ -137,8 +130,7 @@ public class ClientHandler extends Thread {
      *
      */
     private void receiveUserInfo() throws Exception {
-        Message message = ( Message ) in.readObject ( );
-        String msg = new String ( message.getMessage ( ) );
+        String msg = new String(DecryptReceivedMessage());
         String[] msgSplitted = msg.split("[|]");
         String username = msgSplitted[0];
         String password = msgSplitted[1];
@@ -159,6 +151,20 @@ public class ClientHandler extends Thread {
 
     }
 
+    public byte[] DecryptReceivedMessage() throws Exception {
+        // Reads the encrypted message
+        Message message = (Message) in.readObject();
+        // Decrypts the received message
+        byte[] decryptedMessage = Encryption.DecryptMessage(message.getMessage(), sharedSecret.toByteArray());
+        // Verifies the integrity of the message
+        byte[] computedDigest = Integrity.generateDigest(decryptedMessage);
+        if (!Integrity.verifyDigest(message.getSignature(), computedDigest)){
+            throw new RuntimeException("The message has been tampered with!");
+        }
+
+        return decryptedMessage;
+    }
+
     /**
      * Closes the connection by closing the socket and the streams.
      */
@@ -170,6 +176,32 @@ public class ClientHandler extends Thread {
         } catch ( IOException e ) {
             throw new RuntimeException ( e );
         }
+    }
+
+    public void DHRSA() throws Exception {
+        // Perform key distribution
+        PublicKey senderPublicRSAKey = rsaKeyDistribution(in);
+        // Agree on a shared secret
+        BigInteger sharedSecret = AgreeOnSharedSecret(senderPublicRSAKey);
+        setSharedSecret(sharedSecret);
+    }
+
+    /**
+     * Executes the key distribution protocol. The receiver will receive the public key of the sender and will send its
+     * own public key.
+     *
+     * @param in the input stream
+     *
+     * @return the public key of the sender
+     *
+     * @throws Exception when the key distribution protocol fails
+     */
+    private PublicKey rsaKeyDistribution(ObjectInputStream in) throws Exception {
+        // Extract the public key
+        PublicKey senderPublicRSAKey = ( PublicKey ) in.readObject ( );
+        // Send the public key
+        sendPublicRSAKey ( );
+        return senderPublicRSAKey;
     }
 
     private BigInteger AgreeOnSharedSecret(PublicKey senderPublicRSAKey) throws Exception {
