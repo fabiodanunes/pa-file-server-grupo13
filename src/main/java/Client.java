@@ -114,17 +114,30 @@ public class Client {
             PublicKeyToFile();
 
             while ( isConnected ) {
+                String response = new String(DecryptReceivedMessage());
+                if (response.equals("newHandshake")){
+                    System.out.println("Executing new handshake");
+                    receiverPublicRSAKey = rsaKeyDistribution();
+                    DHRSA();
+                    PrivateKeyToFile();
+                    PublicKeyToFile();
+                }
                 // Reads the message to extract the path of the file
-                System.out.println ( "Write the path of the file:" );
-                String request = usrInput.nextLine ( );
+                System.out.println("Write the path of the file:");
+                String request = usrInput.nextLine();
                 // Request the file
-                sendMessage ( request );
+                sendMessage(request);
                 // Waits for the response
-                processResponse ( RequestUtils.getFileNameFromRequest ( request ) );
+                processResponse(RequestUtils.getFileNameFromRequest(request));
+
             }
             // Close connection
             closeConnection ( );
-        } catch (Exception e ) {
+        }
+        catch (IllegalArgumentException e){
+            System.out.println("The request is invalid! Make sure the format used is correct -> GET : file_name.txt" );
+        }
+        catch (Exception e ) {
             throw new RuntimeException ( e );
         }
         // Close connection
@@ -157,7 +170,6 @@ public class Client {
         response = new String(DecryptReceivedMessage());
         if(response.equals("loginFailed")){
             System.out.println("The username already exists, but the password is incorrect");
-            return false;
         }
         else {
             Username = username;
@@ -165,6 +177,7 @@ public class Client {
             System.out.println("Welcome, " + username);
             return true;
         }
+        return false;
     }
 
     /**
@@ -311,7 +324,7 @@ public class Client {
     public void PrivateKeyToFile(){
 
         String caminhoAtual = new File("").getAbsolutePath();
-        String NovaPasta = caminhoAtual + "/"+ getUsername() + "/private";
+        String NovaPasta = caminhoAtual + "/clients/"+ getUsername() + "/private";
         File file = new File(NovaPasta);
         file.mkdirs();
 
