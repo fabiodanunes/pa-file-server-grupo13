@@ -1,3 +1,4 @@
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -17,6 +18,8 @@ public class ClientHandler extends Thread {
     private final PublicKey publicRSAKey;
     private final boolean isConnected;
     private BigInteger sharedSecret;
+    private int clientInd;
+    private String clientUsername;
 
     /**
      * Creates a ClientHandler object by specifying the socket to communicate with the client. All the processing is
@@ -26,10 +29,10 @@ public class ClientHandler extends Thread {
      *
      * @throws IOException when an I/O error occurs when creating the socket
      */
-    public ClientHandler ( Socket client, PublicKey publicRSAKey, Server server ) throws IOException {
+    public ClientHandler ( Socket client, Server server ) throws IOException {
         this.client = client;
         this.server = server;
-        this.publicRSAKey = publicRSAKey;
+        this.publicRSAKey = server.getPublicRSAKey();
         in = new ObjectInputStream ( client.getInputStream ( ) );
         out = new ObjectOutputStream ( client.getOutputStream ( ) );
         isConnected = true; // TODO: Check if this is necessary or if it should be controlled
@@ -61,12 +64,22 @@ public class ClientHandler extends Thread {
             receiveUserInfo();
 
             while ( isConnected ) {
+                if (server.getRequests(clientInd) >= 5){
+                    System.out.println("!!5 Requests made!!\n!!For safety reasons, executing a new handshake!!");
+                    sendMessage("newHandshake");
+                    newHandshake();
+                    server.setRequests(clientInd, 0);
+                }
+                else {
+                    sendMessage("continue");
+                }
                 byte[] decryptedMessage = DecryptReceivedMessage();
                 String request = new String(decryptedMessage);
 
                 // Reads the file and sends it to the client
                 byte[] content = FileHandler.readFile(RequestUtils.getAbsoluteFilePath(request));
                 sendFile(content);
+                server.addRequest(clientInd);
             }
 
             // Close connection
@@ -134,20 +147,23 @@ public class ClientHandler extends Thread {
         String username = msgSplitted[0];
         String password = msgSplitted[1];
         if(server.getClients().contains(username)){
-            String userPass = server.getPasswords().get(server.getClients().indexOf(username));
+            int userIndex = server.getClients().indexOf(username);
+            String userPass = server.getPasswords().get(userIndex);
             if (password.equals(userPass)){
-                sendMessage("login Success");
+                sendMessage("loginSuccess");
+                clientInd = userIndex;
             }
             else {
-                sendMessage("login Failed");
+                sendMessage("loginFailed");
                 receiveUserInfo();
             }
         }
         else {
             server.newClient(username, password);
             sendMessage("new");
+            clientInd = server.getClients().indexOf(username);
         }
-
+        clientUsername = username;
     }
 
     /**
@@ -247,5 +263,31 @@ public class ClientHandler extends Thread {
      */
     private void sendPublicDHKey(BigInteger publicKey) throws Exception {
         out.writeObject(Encryption.encryptRSA(publicKey.toByteArray(), server.getPrivateRSAKey()));
+    }
+
+
+    /**
+     * Prepares for a new handshake after the limit of requests has been reached for each session
+     */
+    private void newHandshake() throws Exception {
+        String currentPath = new File("").getAbsolutePath();
+        File file = new File(currentPath + "/clients/"+ clientUsername);
+        deleteDirectory(file);
+        DHRSA();
+    }
+
+    /**
+     * Deletes the directory and all its files
+     *
+     * @param directoryToBeDeleted the directory to be deleted
+     */
+    private void deleteDirectory(File directoryToBeDeleted) {
+        File[] allContents = directoryToBeDeleted.listFiles();
+        if (allContents != null) {
+            for (File file : allContents) {
+                deleteDirectory(file);
+            }
+        }
+        directoryToBeDeleted.delete();
     }
 }

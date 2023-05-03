@@ -23,7 +23,7 @@ public class Server implements Runnable {
     private final int MAX_CLIENTS = 10;
     private ArrayList<String> clients;
     private ArrayList<String> passwords;
-    private int[] sessions;
+    private int[] requests;
 
 
     /**
@@ -42,7 +42,7 @@ public class Server implements Runnable {
         this.publicRSAKey = keyPair.getPublic();
         clients = new ArrayList<>();
         passwords = new ArrayList<>();
-        sessions = new int[MAX_CLIENTS];
+        requests = new int[MAX_CLIENTS];
     }
 
     /**
@@ -81,10 +81,16 @@ public class Server implements Runnable {
         return passwords;
     }
 
-    public void newClient(String client, String password) {
-        clients.add(client);
-        passwords.add(password);
-        sessions[clients.indexOf(client)] = 1;
+    public int getRequests(int ind) {
+        return requests[ind];
+    }
+
+    public void addRequest(int ind){
+        requests[ind]++;
+    }
+
+    public void setRequests(int ind, int n){
+        requests[ind] = n;
     }
 
     @Override
@@ -109,8 +115,20 @@ public class Server implements Runnable {
      * @throws IOException if an I/O error occurs when reading stream header
      */
     private void process ( Socket client ) throws IOException {
-        ClientHandler clientHandler = new ClientHandler ( client, getPublicRSAKey(), this );
+        ClientHandler clientHandler = new ClientHandler ( client, this );
         clientHandler.start ( );
+    }
+
+    /**
+     * Adds the info of the new client to the arrays
+     *
+     * @param client username of the new client
+     * @param password password of the new client
+     */
+    public void newClient(String client, String password) {
+        clients.add(client);
+        passwords.add(password);
+        requests[clients.indexOf(client)] = 0;
     }
 
     /**
