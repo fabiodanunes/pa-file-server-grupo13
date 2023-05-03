@@ -195,9 +195,9 @@ public class Client {
         // Reads the encrypted message
         Message message = (Message) in.readObject();
         // Decrypts the received message
-        byte[] decryptedMessage = Encryption.DecryptMessage(message.getMessage(), sharedSecret.toByteArray());
+        byte[] decryptedMessage = Encryption.DecryptMessage(message.getMessage(), getSharedSecret().toByteArray());
         // Verifies the integrity of the message
-        byte[] computedDigest = Integrity.generateDigest(decryptedMessage);
+        byte[] computedDigest = Integrity.generateDigest(decryptedMessage, getSharedSecret().toByteArray());
         if (!Integrity.verifyDigest(message.getSignature(), computedDigest)){
             throw new RuntimeException("The message has been tampered with!");
         }
@@ -215,9 +215,9 @@ public class Client {
      */
     public void sendMessage(String message) throws Exception{
         // Encrypts the message
-        byte[] encryptedMessage = Encryption.EncryptMessage(message.getBytes(), sharedSecret.toByteArray());
+        byte[] encryptedMessage = Encryption.EncryptMessage(message.getBytes(), getSharedSecret().toByteArray());
         // Creates the MAC message object
-        byte[] digest = Integrity.generateDigest(message.getBytes());
+        byte[] digest = Integrity.generateDigest(message.getBytes(), getSharedSecret().toByteArray());
         // Creates the message object
         Message messageObj = new Message(encryptedMessage, digest);
         // Sends the message
