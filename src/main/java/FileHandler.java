@@ -36,6 +36,4 @@ public class FileHandler {
         fileOutputStream.write ( content );
         fileOutputStream.close ( );
     }
-
-
 }

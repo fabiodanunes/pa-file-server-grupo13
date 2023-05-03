@@ -12,7 +12,6 @@ import java.util.Scanner;
  * streams enables the sender to send any kind of object.
  */
 public class Client {
-
     private static final String HOST = "0.0.0.0";
     private final Socket client;
     private final ObjectInputStream in;
@@ -21,10 +20,10 @@ public class Client {
     private final String userDir;
     private String Username;
     private String Password;
-
     private final PublicKey publicRSAKey;
     private final PrivateKey privateRSAKey;
     private PublicKey receiverPublicRSAKey;
+    private BigInteger sharedSecret;
 
     /**
      * Constructs a Client object by specifying the port to connect to. The socket must be created before the sender can
@@ -46,7 +45,7 @@ public class Client {
         this.privateRSAKey = keyPair.getPrivate();
         this.publicRSAKey = keyPair.getPublic();
         receiverPublicRSAKey = rsaKeyDistribution();
-}
+    }
 
     /**
      * Gets the username of the client
@@ -85,6 +84,24 @@ public class Client {
     }
 
     /**
+     * Gets the shared secret
+     *
+     * @return the value of the shared secret
+     */
+    public BigInteger getSharedSecret(){
+        return sharedSecret;
+    }
+
+    /**
+     * Sets the shared secret
+     *
+     * @param sh the value of the shared secret
+     */
+    public void setSharedSecret(BigInteger sh){
+        this.sharedSecret = sh;
+    }
+
+    /**
      * Executes the client. It reads the file from the console and sends it to the server. It waits for the response and
      * writes the file to the temporary directory.
      */
@@ -93,13 +110,12 @@ public class Client {
         try {
             DHRSA();
             while (!authenticate(usrInput));
-
             PrivateKeyToFile();
             PublicKeyToFile();
 
             while ( isConnected ) {
                 // Reads the message to extract the path of the file
-                System.out.println ( "Write the path of the file" );
+                System.out.println ( "Write the path of the file:" );
                 String request = usrInput.nextLine ( );
                 // Request the file
                 sendMessage ( request );
@@ -113,19 +129,6 @@ public class Client {
         }
         // Close connection
         closeConnection ( );
-    }
-
-    public void DHRSA() throws Exception {
-        // Agree on shared secret
-        BigInteger sharedSecret = AgreeOnSharedSecret(receiverPublicRSAKey);
-        // Encrypts the message
-        byte[] encryptedMessage = Encryption.EncryptMessage(publicRSAKey.toString().getBytes(), sharedSecret.toByteArray());
-        // Gererates the MAC
-        byte[] digest = Integrity.generateDigest(publicRSAKey.toString().getBytes());
-        // creates message obj
-        Message message = new Message(encryptedMessage, digest);
-        // Sends the encrypted message
-        out.writeObject(message);
     }
 
     /**
@@ -147,11 +150,11 @@ public class Client {
 
         //Concatenates username and password in a string to be sent to the server and sends
         String msg = username + "|" + password;
+
         sendMessage(msg);
 
         //Receives the server message to check if the authentication succeeded
-        Message message = (Message) in.readObject();
-        response = new String(message.getMessage());
+        response = new String(DecryptReceivedMessage());
         if(response.equals("loginFailed")){
             System.out.println("The username already exists, but the password is incorrect");
             return false;
@@ -171,12 +174,27 @@ public class Client {
      */
     private void processResponse ( String fileName ) {
         try {
-            Message response = ( Message ) in.readObject ( );
+            byte[] decryptedMessage = DecryptReceivedMessage();
+
             System.out.println ( "File received" );
-            FileHandler.writeFile ( userDir + "/" + fileName , response.getMessage ( ) );
-        } catch ( IOException | ClassNotFoundException e ) {
-            e.printStackTrace ( );
+            FileHandler.writeFile ( userDir + "/" + fileName, decryptedMessage);
+        } catch(Exception e){
+            e.printStackTrace();
         }
+    }
+
+    public byte[] DecryptReceivedMessage() throws Exception {
+        // Reads the encrypted message
+        Message message = (Message) in.readObject();
+        // Decrypts the received message
+        byte[] decryptedMessage = Encryption.DecryptMessage(message.getMessage(), sharedSecret.toByteArray());
+        // Verifies the integrity of the message
+        byte[] computedDigest = Integrity.generateDigest(decryptedMessage);
+        if (!Integrity.verifyDigest(message.getSignature(), computedDigest)){
+            throw new RuntimeException("The message has been tampered with!");
+        }
+
+        return decryptedMessage;
     }
 
     /**
@@ -187,11 +205,13 @@ public class Client {
      *
      * @throws IOException when an I/O error occurs when sending the message
      */
-    public void sendMessage ( String message ) throws Exception {
+    public void sendMessage(String message) throws Exception{
+        // Encrypts the message
+        byte[] encryptedMessage = Encryption.EncryptMessage(message.getBytes(), sharedSecret.toByteArray());
         // Creates the MAC message object
         byte[] digest = Integrity.generateDigest(message.getBytes());
-        Message messageObj = new Message(message.getBytes(), digest);
-
+        // Creates the message object
+        Message messageObj = new Message(encryptedMessage, digest);
         // Sends the message
         out.writeObject(messageObj);
         out.flush();
@@ -200,8 +220,8 @@ public class Client {
     /**
      * Send his publicRSAKey to the server to establish a key swap to a future communication
      * */
-    private void sendPublicRSAKey ( ) throws IOException {
-        out.writeObject ( publicRSAKey );
+    private void sendPublicRSAKey() throws IOException{
+        out.writeObject(publicRSAKey);
         out.flush ( );
     }
 
@@ -209,8 +229,6 @@ public class Client {
         sendPublicRSAKey ( );
         return ( PublicKey ) in.readObject ( );
     }
-
-
 
     /**
      * Closes the connection by closing the socket and the streams.
@@ -223,6 +241,11 @@ public class Client {
         } catch ( IOException e ) {
             throw new RuntimeException ( e );
         }
+    }
+
+    public void DHRSA() throws Exception {
+        BigInteger sharedSecret = AgreeOnSharedSecret(receiverPublicRSAKey);
+        setSharedSecret(sharedSecret);
     }
 
     private BigInteger AgreeOnSharedSecret(PublicKey receiverPublicRSAKey) throws Exception{
@@ -240,11 +263,10 @@ public class Client {
     private void sendPublicDHKey(byte[] publicKey) throws Exception{
         out.writeObject(publicKey);
     }
+
     /**
-     *
      * Save the private key generated in the file including the username + name the file
      * It is generated his own folder to save his private key
-     *
      * */
     public void PrivateKeyToFile() throws IOException {
 
@@ -274,5 +296,4 @@ public class Client {
             e.printStackTrace();
         }
     }
-
 }
