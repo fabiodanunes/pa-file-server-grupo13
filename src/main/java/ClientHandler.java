@@ -67,7 +67,7 @@ public class ClientHandler extends Thread {
                 if (server.getRequests(clientInd) >= 5){
                     System.out.println("!!5 Requests made!!\n!!For safety reasons, executing a new handshake!!");
                     sendMessage("newHandshake");
-                    newHandshake();
+                    DHRSA();
                     server.setRequests(clientInd, 0);
                 }
                 else {
@@ -88,6 +88,7 @@ public class ClientHandler extends Thread {
             // Close connection
             closeConnection ( );
         }
+        removeClientKeys();
     }
 
     /**
@@ -254,6 +255,7 @@ public class ClientHandler extends Thread {
         return DiffieHellman.computePrivateKey(clientPublicKey, privateKey);
     }
 
+
     /**
      * Sends the public key to the client
      *
@@ -267,14 +269,18 @@ public class ClientHandler extends Thread {
 
 
     /**
-     * Prepares for a new handshake after the limit of requests has been reached for each session
+     * Removes all files and directories used to store the client's public and private
+     * keys information
      */
-    private void newHandshake() throws Exception {
+    private void removeClientKeys(){
         String currentPath = new File("").getAbsolutePath();
-        File file = new File(currentPath + "/clients/"+ clientUsername);
-        deleteDirectory(file);
-        DHRSA();
+        File clientDirectory = new File(currentPath + "/clients/"+ clientUsername);
+        File clientPUkey = new File(currentPath + "/pki/public_keys/"+ clientUsername + "PUk.key");
+        deleteDirectory(clientDirectory);
+        clientPUkey.delete();
+        System.out.println(clientUsername + "'s keys info removed");
     }
+
 
     /**
      * Deletes the directory and all its files
