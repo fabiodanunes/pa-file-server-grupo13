@@ -13,13 +13,11 @@ import java.util.ArrayList;
  * time a client connects to the server, a new thread is created to handle the communication with the client.
  */
 public class Server implements Runnable {
-
     public static final String FILE_PATH = "server/files";
     private final ServerSocket server;
     private final boolean isConnected;
     private final PrivateKey privateRSAKey;
     private final PublicKey publicRSAKey;
-
     private final int MAX_CLIENTS = 10;
     private ArrayList<String> clients;
     private ArrayList<String> passwords;
