@@ -8,7 +8,6 @@ import java.io.IOException;
  */
 public class FileHandler {
 
-
     /**
      * Reads a text file and returns the result in bytes.
      *

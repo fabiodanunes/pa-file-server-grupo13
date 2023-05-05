@@ -12,7 +12,6 @@ import java.util.Scanner;
  * streams enables the sender to send any kind of object.
  */
 public class Client {
-    private static final String HOST = "0.0.0.0";
     private final Socket client;
     private final ObjectInputStream in;
     private final ObjectOutputStream out;
@@ -33,8 +32,8 @@ public class Client {
      *
      * @throws IOException when an I/O error occurs when creating the socket
      */
-    public Client ( int port ) throws Exception {
-        client = new Socket ( HOST , port );
+    public Client ( String host, int port ) throws Exception {
+        client = new Socket ( host , port );
         out = new ObjectOutputStream ( client.getOutputStream ( ) );
         in = new ObjectInputStream ( client.getInputStream ( ) );
         isConnected = true; // TODO: Check if this is necessary or if it should be controlled
@@ -57,12 +56,30 @@ public class Client {
     }
 
     /**
+     * Sets the username of the client
+     *
+     * @param username the username of the client
+     */
+    public void setUsername(String username) {
+        this.Username = username;
+    }
+
+    /**
      * Gets the password of the client
      *
      *@return Password
      */
     public String getPassword() {
         return Password;
+    }
+
+    /**
+     * Sets the password of the client
+     *
+     * @param password the password of the client
+     */
+    public void setPassword(String password){
+        this.Password = password;
     }
 
     /**
@@ -152,7 +169,7 @@ public class Client {
      * @throws IOException if an I/O error occurs when opening the socket
      * @throws ClassNotFoundException if the class of the object to be read is not found
      */
-    private boolean authenticate(Scanner usrInput) throws Exception{
+    public boolean authenticate(Scanner usrInput) throws Exception{
         String response = "";
 
         //Gets username and password (new or existing one)
@@ -172,9 +189,9 @@ public class Client {
             System.out.println("The username already exists, but the password is incorrect");
         }
         else {
-            Username = username;
-            Password = password;
-            System.out.println("Welcome, " + username);
+            setUsername(username);
+            setPassword(password);
+            System.out.println("Welcome, " + getUsername());
             return true;
         }
         return false;
@@ -256,7 +273,7 @@ public class Client {
      *
      * @throws Exception when the key distribution protocol fails
      */
-    private PublicKey rsaKeyDistribution ( ) throws Exception {
+    public PublicKey rsaKeyDistribution ( ) throws Exception {
         sendPublicRSAKey ( );
         return ( PublicKey ) in.readObject ( );
     }
@@ -264,7 +281,7 @@ public class Client {
     /**
      * Closes the connection by closing the socket and the streams.
      */
-    private void closeConnection ( ) {
+    public void closeConnection ( ) {
         try {
             client.close ( );
             out.close ( );
@@ -322,7 +339,6 @@ public class Client {
      * It is generated his own folder to save his private key
      * */
     public void PrivateKeyToFile(){
-
         String caminhoAtual = new File("").getAbsolutePath();
         String NovaPasta = caminhoAtual + "/clients/"+ getUsername() + "/private";
         File file = new File(NovaPasta);
