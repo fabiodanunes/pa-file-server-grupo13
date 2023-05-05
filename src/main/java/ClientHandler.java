@@ -5,6 +5,8 @@ import java.io.ObjectOutputStream;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.security.PublicKey;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * This class represents the client handler. It handles the communication with the client. It reads the file from the
@@ -109,15 +111,13 @@ public class ClientHandler extends Thread {
      * @throws IOException when an I/O error occurs when sending the file
      */
     private void sendFile(byte[] content) throws Exception{
-        // Encrypts the message
-        byte[] encryptedContent = Encryption.EncryptMessage(content, getSharedSecret().toByteArray());
-        // Creates the MAC message object
-        byte[] digest = Integrity.generateDigest(content, getSharedSecret().toByteArray());
-        // Creates the message object
-        Message messageObj = new Message(encryptedContent, digest);
-        // Sends the message
-        out.writeObject(messageObj);
-        out.flush();
+        sendMessage("Ficheiro leitura");
+        ArrayList<byte[]> ecbProcess = ByteUtils.splitByteArray(content,16);
+        for ( byte[] textSplit : ecbProcess ) {
+            sendMessage(new String(textSplit));
+        }
+        sendMessage("Termina ficheiro");
+        System.out.println("File sent to client");
     }
 
     /**
