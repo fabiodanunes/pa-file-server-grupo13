@@ -5,6 +5,8 @@ import java.nio.file.Files;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Scanner;
 
 /**
@@ -145,8 +147,10 @@ public class Client {
                 // Request the file
                 sendMessage(request);
                 // Waits for the response
-                processResponse(RequestUtils.getFileNameFromRequest(request));
+                processResponse ( RequestUtils.getFileNameFromRequest ( request ) );
 
+                byte[] msg = FileHandler.readFile(userDir + "/" + RequestUtils.getFileNameFromRequest ( request ));
+                CopyFileToUserFolder(RequestUtils.getFileNameFromRequest ( request ), msg);
             }
             // Close connection
             closeConnection ( );
@@ -207,6 +211,10 @@ public class Client {
             byte[] decryptedMessage = DecryptReceivedMessage();
 
             System.out.println ( "File received" );
+            System.out.println ( );
+            System.out.println ( "File content: " );
+            System.out.println ( new String(decryptedMessage));
+            System.out.println ( );
             FileHandler.writeFile ( userDir + "/" + fileName, decryptedMessage);
         } catch(Exception e){
             e.printStackTrace();
@@ -225,14 +233,43 @@ public class Client {
         // Reads the encrypted message
         Message message = (Message) in.readObject();
         // Decrypts the received message
-        byte[] decryptedMessage = Encryption.DecryptMessage(message.getMessage(), getSharedSecret().toByteArray());
+        byte[] decrypted = Encryption.DecryptMessage(message.getMessage(), getSharedSecret().toByteArray());
+        if(new String(decrypted).equals("Ficheiro leitura")){
+            byte[] fileReceived = receiveFile();
+            return fileReceived;
+        }
         // Verifies the integrity of the message
-        byte[] computedDigest = Integrity.generateDigest(decryptedMessage, getSharedSecret().toByteArray());
+        byte[] computedDigest = Integrity.generateDigest(decrypted, getSharedSecret().toByteArray());
         if (!Integrity.verifyDigest(message.getSignature(), computedDigest)){
             throw new RuntimeException("The message has been tampered with!");
         }
+        return decrypted;
+    }
 
-        return decryptedMessage;
+    /**
+     * Method to read each message sent by the server containing the file content requested
+     *
+     * @return finalResult of concatenation all messages received with all parts of file content requested
+     *
+     * */
+
+    public byte[] receiveFile () throws Exception {
+        byte[] finalResult = new byte[0];
+        while (true) {
+            Message message = (Message) in.readObject();
+            byte[] decrypted = Encryption.DecryptMessage(message.getMessage(), sharedSecret.toByteArray());
+            if (new String(decrypted).equals("Termina ficheiro")) {
+                return finalResult;
+            }
+
+            // Verifies the integrity of the message
+            byte[] computedDigest = Integrity.generateDigest(decrypted, getSharedSecret().toByteArray());
+            if (!Integrity.verifyDigest(message.getSignature(), computedDigest)){
+                throw new RuntimeException("The message has been tampered with!");
+            }
+
+            finalResult = ByteUtils.concatByteArrays(finalResult, decrypted);
+        }
     }
 
     /**
@@ -344,9 +381,22 @@ public class Client {
         File file = new File(NovaPasta);
         file.mkdirs();
 
+            try {
+                BufferedWriter writer = new BufferedWriter(new FileWriter(NovaPasta + "/" + getUsername() + "PRk.key"));
+                writer.write(getPrivateRSAKey().toString());
+                writer.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+    }
+
+    /**
+     * Save the public key in his respective folder including the username on the filename
+     * */
+    public void PublicKeyToFile () {
         try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(NovaPasta +"/"+ getUsername() +"PRk.key"));
-            writer.write(getPrivateRSAKey().toString());
+            BufferedWriter writer = new BufferedWriter(new FileWriter("pki/public_keys/" + getUsername() + "PUk.key"));
+            writer.write(getPublicRSAKey().toString());
             writer.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -354,12 +404,21 @@ public class Client {
     }
 
     /**
-     * Save the public key in his respective folder including the username on the filename
+     * Method that writes in the clients folder the file requested
+     *
+     * @param Filename filename requested
+     * @param text content of file requested
+     *
      * */
-    public void PublicKeyToFile(){
+    public void CopyFileToUserFolder (String Filename,byte[] text){
+        String caminhoAtual = new File("").getAbsolutePath();
+        String NovaPasta = caminhoAtual + "/clients/" + getUsername() + "/files";
+        File file = new File(NovaPasta);
+        file.mkdirs();
+
         try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter("pki/public_keys/"+ getUsername() +"PUk.key"));
-            writer.write(getPublicRSAKey().toString());
+            BufferedWriter writer = new BufferedWriter(new FileWriter(NovaPasta + "/" + Filename));
+            writer.write(new String(text));
             writer.close();
         } catch (Exception e) {
             e.printStackTrace();
