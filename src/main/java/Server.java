@@ -34,7 +34,7 @@ public class Server implements Runnable {
      */
     public Server ( int port ) throws Exception {
         server = new ServerSocket ( port );
-        isConnected = true; // TODO: Check if this is necessary or if it should be controlled
+        isConnected = true;
         KeyPair keyPair = Encryption.generateKeyPair();
         this.privateRSAKey = keyPair.getPrivate();
         this.publicRSAKey = keyPair.getPublic();
@@ -78,7 +78,6 @@ public class Server implements Runnable {
             sendPUkToFile();
             // Gets all clients usernames saved from file
             clientRegister();
-            System.out.println(clients);
 
             while ( isConnected ) {
                 Socket client = server.accept ( );
@@ -115,8 +114,21 @@ public class Server implements Runnable {
      *
      * @param client username of the new client
      */
-    public void newClient(String client) {
+    public void newClient(String client, String pass) {
         clients.add(client);
+        saveClientInfo(client, pass);
+    }
+
+    /**
+     * Saves the new client information in the file that contains all the clients info
+     *
+     * @param name username of the client to be saved in the file
+     * @param pass password to be saved in the file
+     */
+    private void saveClientInfo(String name, String pass){
+        //TODO : Encrypt file with this info
+        String info = name + "|" + pass + "|" + 0 + "\n";
+        FileHandler.writeFile(getClientsInfoPath(), info.getBytes(), true);
     }
 
     /**

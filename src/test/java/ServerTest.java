@@ -16,7 +16,7 @@ public class ServerTest {
     @Test
     @DisplayName("Teste de verificação de adição de um novo cliente ao Array do server")
     public void testAddClient() {
-        server.newClient("joni");
+        server.newClient("joni", "987");
 
         assertAll(
                 () -> assertNotNull(server.getClients())
@@ -27,7 +27,7 @@ public class ServerTest {
     @DisplayName("Teste à edição e adição de requests de um certo cliente ao ficheiro")
     public void testRequests(){
         String name = "diego";
-        server.newClient(name);
+        server.newClient(name, "123");
         server.editClientInfo(name, 2, "3");
         server.addRequest(name);
 

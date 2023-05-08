@@ -8,11 +8,11 @@ import static org.junit.jupiter.api.Assertions.*;
 public class RequestUtilsTest {
     @Test
     @DisplayName("Teste relativo à busca do caminho absoluto de um pedido")
-    public void testAbsolutePath() throws IOException {
+    public void testAbsolutePath() {
         String path = "server/files/unitTest2.txt";
         String message = "apenas um texto para ficar no ficheiro de teste";
         byte[] messageInBytes = message.getBytes();
-        FileHandler.writeFile(path, messageInBytes);
+        FileHandler.writeFile(path, messageInBytes, false);
 
         assertEquals(path, RequestUtils.getAbsoluteFilePath("GET : unitTest2.txt"));
     }
