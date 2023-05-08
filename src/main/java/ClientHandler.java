@@ -6,7 +6,6 @@ import java.math.BigInteger;
 import java.net.Socket;
 import java.security.PublicKey;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 /**
  * This class represents the client handler. It handles the communication with the client. It reads the file from the
@@ -20,7 +19,6 @@ public class ClientHandler extends Thread {
     private final PublicKey publicRSAKey;
     private final boolean isConnected;
     private BigInteger sharedSecret;
-    private int clientInd;
     private String clientUsername;
 
     /**
@@ -31,13 +29,13 @@ public class ClientHandler extends Thread {
      *
      * @throws IOException when an I/O error occurs when creating the socket
      */
-    public ClientHandler ( Socket client, Server server ) throws IOException {
+    public ClientHandler (Socket client, Server server) throws IOException {
         this.client = client;
         this.server = server;
         this.publicRSAKey = server.getPublicRSAKey();
         in = new ObjectInputStream ( client.getInputStream ( ) );
         out = new ObjectOutputStream ( client.getOutputStream ( ) );
-        isConnected = true; // TODO: Check if this is necessary or if it should be controlled
+        isConnected = true;
     }
 
     /**
@@ -66,11 +64,11 @@ public class ClientHandler extends Thread {
             receiveUserInfo();
 
             while ( isConnected ) {
-                if (server.getRequests(clientInd) >= 5){
+                if (server.getClientRequests(clientUsername) >= 5){
                     System.out.println("!!5 Requests made!!\n!!For safety reasons, executing a new handshake!!");
                     sendMessage("newHandshake");
                     DHRSA();
-                    server.setRequests(clientInd, 0);
+                    server.editClientInfo(clientUsername, 2,"0");
                 }
                 else {
                     sendMessage("continue");
@@ -81,7 +79,7 @@ public class ClientHandler extends Thread {
                 // Reads the file and sends it to the client
                 byte[] content = FileHandler.readFile(RequestUtils.getAbsoluteFilePath(request));
                 sendFile(content);
-                server.addRequest(clientInd);
+                server.addRequest(clientUsername);
             }
 
             // Close connection
@@ -147,12 +145,10 @@ public class ClientHandler extends Thread {
         String[] msgSplitted = msg.split("[|]");
         String username = msgSplitted[0];
         String password = msgSplitted[1];
-        if(server.getClients().contains(username)){
-            int userIndex = server.getClients().indexOf(username);
-            String userPass = server.getPasswords().get(userIndex);
+        if(server.searchClientLine(username) != 0){
+            String userPass = server.getClientPassword(username);
             if (password.equals(userPass)){
                 sendMessage("loginSuccess");
-                clientInd = userIndex;
             }
             else {
                 sendMessage("loginFailed");
@@ -160,9 +156,9 @@ public class ClientHandler extends Thread {
             }
         }
         else {
-            server.newClient(username, password);
+            server.newClient(username);
             sendMessage("new");
-            clientInd = server.getClients().indexOf(username);
+            saveClientInfo(username, password);
         }
         clientUsername = username;
     }
@@ -255,7 +251,6 @@ public class ClientHandler extends Thread {
         return DiffieHellman.computePrivateKey(clientPublicKey, privateKey);
     }
 
-
     /**
      * Sends the public key to the client
      *
@@ -267,6 +262,17 @@ public class ClientHandler extends Thread {
         out.writeObject(Encryption.encryptRSA(publicKey.toByteArray(), server.getPrivateRSAKey()));
     }
 
+    /**
+     * Saves the new client information in the file that contains all the clients info
+     *
+     * @param name username of the client to be saved in the file
+     * @param pass password to be saved in the file
+     */
+    private void saveClientInfo(String name, String pass){
+        //TODO : Encrypt file with this info
+        String info = name + "|" + pass + "|" + 0 + "\n";
+        FileHandler.writeFile(server.getClientsInfoPath(), info.getBytes(), true);
+    }
 
     /**
      * Removes all files and directories used to store the client's public and private
@@ -276,24 +282,8 @@ public class ClientHandler extends Thread {
         String currentPath = new File("").getAbsolutePath();
         File clientDirectory = new File(currentPath + "/clients/"+ clientUsername);
         File clientPUkey = new File(currentPath + "/pki/public_keys/"+ clientUsername + "PUk.key");
-        deleteDirectory(clientDirectory);
+        FileHandler.deleteDirectory(clientDirectory);
         clientPUkey.delete();
         System.out.println(clientUsername + "'s keys info removed");
-    }
-
-
-    /**
-     * Deletes the directory and all its files
-     *
-     * @param directoryToBeDeleted the directory to be deleted
-     */
-    private void deleteDirectory(File directoryToBeDeleted) {
-        File[] allContents = directoryToBeDeleted.listFiles();
-        if (allContents != null) {
-            for (File file : allContents) {
-                deleteDirectory(file);
-            }
-        }
-        directoryToBeDeleted.delete();
     }
 }

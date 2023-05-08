@@ -5,8 +5,6 @@ import java.nio.file.Files;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Scanner;
 
 /**
@@ -38,7 +36,7 @@ public class Client {
         client = new Socket ( host , port );
         out = new ObjectOutputStream ( client.getOutputStream ( ) );
         in = new ObjectInputStream ( client.getInputStream ( ) );
-        isConnected = true; // TODO: Check if this is necessary or if it should be controlled
+        isConnected = true;
         // Create a temporary directory for putting the request files
         userDir = Files.createTempDirectory ( "fileServer" ).toFile ( ).getAbsolutePath ( );
         System.out.println ( "Temporary directory path " + userDir );
@@ -135,7 +133,7 @@ public class Client {
             while ( isConnected ) {
                 String response = new String(DecryptReceivedMessage());
                 if (response.equals("newHandshake")){
-                    System.out.println("Executing new handshake");
+                    System.out.println("***Executing new handshake***");
                     receiverPublicRSAKey = rsaKeyDistribution();
                     DHRSA();
                     PrivateKeyToFile();
@@ -147,7 +145,7 @@ public class Client {
                 // Request the file
                 sendMessage(request);
                 // Waits for the response
-                processResponse ( RequestUtils.getFileNameFromRequest ( request ) );
+                processResponse(RequestUtils.getFileNameFromRequest(request));
 
                 byte[] msg = FileHandler.readFile(userDir + "/" + RequestUtils.getFileNameFromRequest ( request ));
                 CopyFileToUserFolder(RequestUtils.getFileNameFromRequest ( request ), msg);
@@ -174,7 +172,7 @@ public class Client {
      * @throws ClassNotFoundException if the class of the object to be read is not found
      */
     public boolean authenticate(Scanner usrInput) throws Exception{
-        String response = "";
+        String response;
 
         //Gets username and password (new or existing one)
         System.out.println("Username: ");
@@ -191,11 +189,15 @@ public class Client {
         response = new String(DecryptReceivedMessage());
         if(response.equals("loginFailed")){
             System.out.println("The username already exists, but the password is incorrect");
-        }
-        else {
-            setUsername(username);
-            setPassword(password);
-            System.out.println("Welcome, " + getUsername());
+        } else {
+            Username = username;
+            Password = password;
+            if (response.equals("loginSuccess")){
+                System.out.println("Welcome back, " + username);
+            }
+            else {
+                System.out.println("Welcome, " + username);
+            }
             return true;
         }
         return false;
@@ -215,7 +217,7 @@ public class Client {
             System.out.println ( "File content: " );
             System.out.println ( new String(decryptedMessage));
             System.out.println ( );
-            FileHandler.writeFile ( userDir + "/" + fileName, decryptedMessage);
+            FileHandler.writeFile ( userDir + "/" + fileName, decryptedMessage, false);
         } catch(Exception e){
             e.printStackTrace();
         }
@@ -235,8 +237,7 @@ public class Client {
         // Decrypts the received message
         byte[] decrypted = Encryption.DecryptMessage(message.getMessage(), getSharedSecret().toByteArray());
         if(new String(decrypted).equals("Ficheiro leitura")){
-            byte[] fileReceived = receiveFile();
-            return fileReceived;
+            return receiveFile();
         }
         // Verifies the integrity of the message
         byte[] computedDigest = Integrity.generateDigest(decrypted, getSharedSecret().toByteArray());
@@ -376,6 +377,7 @@ public class Client {
      * It is generated his own folder to save his private key
      * */
     public void PrivateKeyToFile(){
+
         String caminhoAtual = new File("").getAbsolutePath();
         String NovaPasta = caminhoAtual + "/clients/"+ getUsername() + "/private";
         File file = new File(NovaPasta);
@@ -393,7 +395,7 @@ public class Client {
     /**
      * Save the public key in his respective folder including the username on the filename
      * */
-    public void PublicKeyToFile () {
+    public void PublicKeyToFile(){
         try {
             BufferedWriter writer = new BufferedWriter(new FileWriter("pki/public_keys/" + getUsername() + "PUk.key"));
             writer.write(getPublicRSAKey().toString());
