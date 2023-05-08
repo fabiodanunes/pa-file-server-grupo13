@@ -14,24 +14,24 @@ public class ServerTest {
     }
 
     @Test
-    @DisplayName("Teste de verificação de adição de um novo cliente")
+    @DisplayName("Teste de verificação de adição de um novo cliente ao Array do server")
     public void testAddClient() {
-        server.newClient("joni", "321");
+        server.newClient("joni");
 
         assertAll(
-                () -> assertNotNull(server.getClients()),
-                () -> assertNotNull(server.getPasswords())
+                () -> assertNotNull(server.getClients())
         );
     }
 
     @Test
-    @DisplayName("Teste aos requests guardados no server")
+    @DisplayName("Teste à edição e adição de requests de um certo cliente ao ficheiro")
     public void testRequests(){
-        server.newClient("diego", "789");
-        server.setRequests(server.getClients().indexOf("diego"), 3);
-        server.addRequest(server.getClients().indexOf("diego"));
+        String name = "diego";
+        server.newClient(name);
+        server.editClientInfo(name, 2, "3");
+        server.addRequest(name);
 
-        assertEquals(4, server.getRequests(server.getClients().indexOf("diego")));
+        assertEquals(4, server.getClientRequests(name));
     }
 
 }

@@ -3,6 +3,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -14,14 +16,12 @@ import java.util.ArrayList;
  */
 public class Server implements Runnable {
     public static final String FILE_PATH = "server/files";
+    private static final String INFO_PATH = "clients/Info.txt";
     private final ServerSocket server;
     private final boolean isConnected;
     private final PrivateKey privateRSAKey;
     private final PublicKey publicRSAKey;
-    private final int MAX_CLIENTS = 10;
     private ArrayList<String> clients;
-    private ArrayList<String> passwords;
-    private int[] requests;
 
 
     /**
@@ -39,8 +39,6 @@ public class Server implements Runnable {
         this.privateRSAKey = keyPair.getPrivate();
         this.publicRSAKey = keyPair.getPublic();
         clients = new ArrayList<>();
-        passwords = new ArrayList<>();
-        requests = new int[MAX_CLIENTS];
     }
 
     /**
@@ -70,31 +68,17 @@ public class Server implements Runnable {
         return clients;
     }
 
-    /**
-     * Gets the list of passwords from the clients
-     *
-     * @return the list of passwords
-     */
-    public ArrayList<String> getPasswords() {
-        return passwords;
-    }
-
-    public int getRequests(int ind) {
-        return requests[ind];
-    }
-
-    public void addRequest(int ind){
-        requests[ind]++;
-    }
-
-    public void setRequests(int ind, int n){
-        requests[ind] = n;
+    public String getClientsInfoPath() {
+        return INFO_PATH;
     }
 
     @Override
     public void run ( ) {
         try {
             sendPUkToFile();
+            // Gets all clients usernames saved from file
+            clientRegister();
+            System.out.println(clients);
 
             while ( isConnected ) {
                 Socket client = server.accept ( );
@@ -118,15 +102,21 @@ public class Server implements Runnable {
     }
 
     /**
+     * Gets all the clients usernames from the Info file and stores them in the array
+     */
+    public void clientRegister() throws IOException {
+        for (int i = 0; i < Files.lines(Path.of(INFO_PATH)).count(); i++) {
+            clients.add(FileHandler.getTextFromLine(i,0,INFO_PATH));
+        }
+    }
+
+    /**
      * Adds the info of the new client to the arrays
      *
      * @param client username of the new client
-     * @param password password of the new client
      */
-    public void newClient(String client, String password) {
+    public void newClient(String client) {
         clients.add(client);
-        passwords.add(password);
-        requests[clients.indexOf(client)] = 0;
     }
 
     /**
@@ -137,6 +127,93 @@ public class Server implements Runnable {
             server.close ( );
         } catch ( IOException e ) {
             throw new RuntimeException ( e );
+        }
+    }
+
+    /**
+     * Returns the number (not index) of the line that contains the desired username, from the file that
+     * contains all the clients information
+     *
+     * @param username username to be searched in the file
+     * @return number of the line of the username passed, if it equals '0' the username doesn't exist
+     */
+    public int searchClientLine(String username){
+        int lineNum = 0;
+        try {
+            for (int i = 0; i < Files.lines(Path.of(INFO_PATH)).count(); i++) {
+                if (FileHandler.getTextFromLine(i, 0, INFO_PATH).equals(username)) {
+                    lineNum = i + 1;
+                    break;
+                }
+            }
+        }
+        catch (IOException e){
+            System.out.println("!! ERROR OPENING FILE !!");
+            e.printStackTrace();
+        }
+        return lineNum;
+    }
+
+    /**
+     * Gets the client password from the file with all clients information
+     *
+     * @param username username of the client whose password shall be found
+     * @return password
+     */
+    public String getClientPassword(String username) {
+        String pass = "";
+        int line = searchClientLine(username) - 1;
+        if (searchClientLine(username) == 0){
+            System.out.println("Couldn't find the client username");
+        }
+        else {
+            pass = FileHandler.getTextFromLine(line, 1, INFO_PATH);
+        }
+        return pass;
+    }
+
+    /**
+     * Gets the client requests from the file with all clients information
+     *
+     * @param username username of the client whose number of requests shall be found
+     * @return number of requests
+     */
+    public int getClientRequests(String username) {
+        String clientReq = "";
+        int line = searchClientLine(username) - 1;
+        if (searchClientLine(username) == 0){
+            System.out.println("Couldn't find the client username");
+        }
+        else {
+            clientReq = FileHandler.getTextFromLine(line, 2, INFO_PATH);
+        }
+        return Integer.parseInt(clientReq);
+    }
+
+    /**
+     * Increases the requests count of the current client
+     *
+     */
+    public void addRequest(String username) {
+        int req = getClientRequests(username);
+        req++;
+        editClientInfo(username, 2,Integer.toString(req));
+    }
+
+    /**
+     * Changes the desired information of a certain client in the information file
+     *
+     * @param username username of the client
+     * @param parameter position of the info to update (0 -> username, 1 -> password, 2 -> requests)
+     * @param newContent info to change in the file
+     */
+    public void editClientInfo(String username, int parameter, String newContent) {
+        int clientLine = searchClientLine(username) - 1;
+        if (searchClientLine(username) == 0){
+            System.out.println("Couldn't find the client username");
+        }
+        else {
+            FileHandler.editTextFromLine(clientLine, parameter, newContent, INFO_PATH);
         }
     }
 
