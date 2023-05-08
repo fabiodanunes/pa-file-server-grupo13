@@ -5,6 +5,8 @@ import java.nio.file.Files;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Scanner;
 
 /**
@@ -125,7 +127,6 @@ public class Client {
     public void execute ( ) {
         Scanner usrInput = new Scanner ( System.in );
         try {
-            DHRSA();
             while (!authenticate(usrInput));
             PrivateKeyToFile();
             PublicKeyToFile();
@@ -173,31 +174,38 @@ public class Client {
      */
     public boolean authenticate(Scanner usrInput) throws Exception{
         String response;
+        String userInfo = "";
+        String[] userInfoSeparated;
 
-        //Gets username and password (new or existing one)
+        System.out.println("Username/Password (Separated by \"|\" please): ");
+        userInfo = usrInput.nextLine();
+        if(!userInfo.contains("|")) return false;
+        userInfoSeparated = userInfo.split("[|]");
+        if(userInfoSeparated.length < 2 || userInfoSeparated[0].equals("") || userInfoSeparated[1].equals("")) return false;
+
+        DHRSA();
+
+        /* //Gets username and password (new or existing one)
         System.out.println("Username: ");
         String username = usrInput.nextLine();
         System.out.println("Password: ");
         String password = usrInput.nextLine();
 
-        //Concatenates username and password in a string to be sent to the server and sends
-        String msg = username + "|" + password;
 
-        sendMessage(msg);
+        //Concatenates username and password in a string to be sent to the server and sends
+        String msg = username + "|" + password; */
+
+        sendMessage(userInfo);
 
         //Receives the server message to check if the authentication succeeded
         response = new String(DecryptReceivedMessage());
         if(response.equals("loginFailed")){
             System.out.println("The username already exists, but the password is incorrect");
-        } else {
-            Username = username;
-            Password = password;
-            if (response.equals("loginSuccess")){
-                System.out.println("Welcome back, " + username);
-            }
-            else {
-                System.out.println("Welcome, " + username);
-            }
+        }
+        else {
+            setUsername(userInfoSeparated[0]);
+            setPassword(userInfoSeparated[1]);
+            System.out.println("Welcome, " + getUsername());
             return true;
         }
         return false;
