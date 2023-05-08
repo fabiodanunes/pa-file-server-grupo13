@@ -156,9 +156,8 @@ public class ClientHandler extends Thread {
             }
         }
         else {
-            server.newClient(username);
+            server.newClient(username, password);
             sendMessage("new");
-            saveClientInfo(username, password);
         }
         clientUsername = username;
     }
@@ -260,18 +259,6 @@ public class ClientHandler extends Thread {
      */
     private void sendPublicDHKey(BigInteger publicKey) throws Exception {
         out.writeObject(Encryption.encryptRSA(publicKey.toByteArray(), server.getPrivateRSAKey()));
-    }
-
-    /**
-     * Saves the new client information in the file that contains all the clients info
-     *
-     * @param name username of the client to be saved in the file
-     * @param pass password to be saved in the file
-     */
-    private void saveClientInfo(String name, String pass){
-        //TODO : Encrypt file with this info
-        String info = name + "|" + pass + "|" + 0 + "\n";
-        FileHandler.writeFile(server.getClientsInfoPath(), info.getBytes(), true);
     }
 
     /**
