@@ -34,10 +34,10 @@ public class FileHandlerTest {
         String message = "oliver/456/2";
         String encryptedMessage = Encryption.encrypt("AES", message, server.getEncDecFileKey());
         FileHandler.writeFile(path, encryptedMessage.getBytes(), false);
-        // o teste mudará o nome para "oscar"
-        FileHandler.editTextFromLine(0, 0, "oscar", path, server.getEncDecFileKey());
+        // o teste mudará o nome para "osvaldo"
+        FileHandler.editTextFromLine(0, 0, "osvaldo", path, server.getEncDecFileKey());
 
-        assertEquals("oscar/456/2", FileHandler.getLineFromFile(0, path, server.getEncDecFileKey()));
+        assertEquals("osvaldo/456/2", FileHandler.getLineFromFile(0, path, server.getEncDecFileKey()));
     }
 
     @Test
