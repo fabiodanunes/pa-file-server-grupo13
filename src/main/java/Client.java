@@ -5,8 +5,6 @@ import java.nio.file.Files;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Scanner;
 
 /**
@@ -205,7 +203,12 @@ public class Client {
         else {
             setUsername(userInfoSeparated[0]);
             setPassword(userInfoSeparated[1]);
-            System.out.println("Welcome, " + getUsername());
+            if (response.equals("loginSuccess")){
+                System.out.println("Welcome back, " + getUsername());
+            }
+            else {
+                System.out.println("Welcome, " + getUsername());
+            }
             return true;
         }
         return false;

@@ -1,3 +1,5 @@
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 import java.io.*;
 
 /**
@@ -28,7 +30,12 @@ public class FileHandler {
     }
 
     /**
-     * Writes a text file and returns the result in bytes
+     * Writes to a text file
+     *
+     * @param path path to the file to write
+     * @param content byte array with the content to be written
+     * @param append true when the content should be added to current file content,
+     *               false when it should replace it
      */
     public static void writeFile ( String path , byte[] content, boolean append ) {
         BufferedWriter writer;
@@ -50,10 +57,10 @@ public class FileHandler {
      *
      * @return line requested
      */
-    public static String getLineFromFile(int line, String path) {
+    public static String getLineFromFile(int line, String path, SecretKey key) throws Exception {
         String fileContent = new String(readFile(path));
         String[] lines = fileContent.split("\n");
-        return lines[line];
+        return Encryption.decrypt("AES",lines[line],key);
     }
 
     /**
@@ -64,9 +71,9 @@ public class FileHandler {
      * @param path path to the file
      * @return info selected from the line
      */
-    public static String getTextFromLine(int line, int parameter, String path) {
-        String lineRead = getLineFromFile(line, path);
-        String[] parameters = lineRead.split("[|]");
+    public static String getTextFromLine(int line, int parameter, String path, SecretKey key) throws Exception {
+        String lineRead = getLineFromFile(line, path, key);
+        String[] parameters = lineRead.split("/");
         return parameters[parameter];
     }
 
@@ -77,14 +84,16 @@ public class FileHandler {
      * @param newContent text that substitutes the current line
      * @param path path to the file
      */
-    public static void editLineFromFile(int line, String newContent, String path) {
+    public static void editLineFromFile(int line, String newContent, String path, SecretKey key) throws Exception {
         String fileContent = new String(readFile(path));
         String[] lines = fileContent.split("\n");
         lines[line] = newContent;
         fileContent = "";
         for (String s : lines) {
+            s = Encryption.encrypt("AES", s, key);
             fileContent = fileContent.concat(s + "\n");
         }
+
         writeFile(path, fileContent.getBytes(),false);
     }
 
@@ -96,12 +105,17 @@ public class FileHandler {
      * @param newContent text that substitutes the current line
      * @param path path to the file
      */
-    public static void editTextFromLine(int line, int parameter, String newContent, String path) {
-        String lineEdit = getLineFromFile(line, path);
-        String[] parameters = lineEdit.split("[|]");
-        parameters[parameter] = newContent;
-        lineEdit = parameters[0] + "|" + parameters[1] + "|" + parameters[2];
-        editLineFromFile(line, lineEdit, path);
+    public static void editTextFromLine(int line, int parameter, String newContent, String path, SecretKey key) {
+        try {
+            String lineEdit = getLineFromFile(line, path, key);
+            String[] parameters = lineEdit.split("/");
+            parameters[parameter] = newContent;
+            lineEdit = parameters[0] + "/" + parameters[1] + "/" + parameters[2];
+            editLineFromFile(line, lineEdit, path, key);
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     /**

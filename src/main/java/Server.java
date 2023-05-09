@@ -1,13 +1,11 @@
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.KeyPair;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+import java.security.*;
 import java.util.ArrayList;
 
 /**
@@ -16,11 +14,12 @@ import java.util.ArrayList;
  */
 public class Server implements Runnable {
     public static final String FILE_PATH = "server/files";
-    private static final String INFO_PATH = "clients/Info.txt";
+    private static final String INFO_PATH = "server/Info.txt";
     private final ServerSocket server;
     private final boolean isConnected;
     private final PrivateKey privateRSAKey;
     private final PublicKey publicRSAKey;
+    private static SecretKey encDecFileKey;
     private ArrayList<String> clients;
 
 
@@ -39,6 +38,8 @@ public class Server implements Runnable {
         this.privateRSAKey = keyPair.getPrivate();
         this.publicRSAKey = keyPair.getPublic();
         clients = new ArrayList<>();
+        generateAndSaveFileKey();
+
     }
 
     /**
@@ -100,12 +101,47 @@ public class Server implements Runnable {
         clientHandler.start ( );
     }
 
+    public static SecretKey generateKey(int n) throws NoSuchAlgorithmException {
+        KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
+        keyGenerator.init(n);
+        SecretKey key = keyGenerator.generateKey();
+        return key;
+    }
+
+
+    private void generateAndSaveFileKey() throws Exception {
+        KeyStore keyStore = KeyStore.getInstance("JCEKS");
+        File keystoreFile = new File("server/infoFileKey.jceks");
+
+        if (!keystoreFile.exists()) {
+            keystoreFile.createNewFile();
+            keyStore.load(null, "pa23".toCharArray());
+
+        } else {
+            FileInputStream fis = new FileInputStream(keystoreFile);
+            keyStore.load(fis, "pa23".toCharArray());
+            fis.close();
+        }
+        if(new File(INFO_PATH).length() == 0){
+            encDecFileKey = generateKey(128);
+
+            KeyStore.SecretKeyEntry keyEntry = new KeyStore.SecretKeyEntry(encDecFileKey);
+
+            keyStore.setEntry("encDecFileKey", keyEntry, new KeyStore.PasswordProtection("pa23".toCharArray()));
+
+            FileOutputStream fileOutputStream = new FileOutputStream(keystoreFile);
+            keyStore.store(fileOutputStream, "pa23".toCharArray());
+            fileOutputStream.close();
+        }
+        else encDecFileKey = (SecretKey) keyStore.getKey("encDecFileKey", "pa23".toCharArray());
+    }
+
     /**
      * Gets all the clients usernames from the Info file and stores them in the array
      */
-    public void clientRegister() throws IOException {
+    public void clientRegister() throws Exception {
         for (int i = 0; i < Files.lines(Path.of(INFO_PATH)).count(); i++) {
-            clients.add(FileHandler.getTextFromLine(i,0,INFO_PATH));
+            clients.add(FileHandler.getTextFromLine(i,0,INFO_PATH, encDecFileKey));
         }
     }
 
@@ -126,9 +162,15 @@ public class Server implements Runnable {
      * @param pass password to be saved in the file
      */
     private void saveClientInfo(String name, String pass){
-        //TODO : Encrypt file with this info
-        String info = name + "|" + pass + "|" + 0 + "\n";
-        FileHandler.writeFile(getClientsInfoPath(), info.getBytes(), true);
+        String info = name + "/" + pass + "/" + 0;
+        try {
+            String encInfo = Encryption.encrypt("AES", info, encDecFileKey);
+            encInfo += "\n";
+            FileHandler.writeFile(getClientsInfoPath(), encInfo.getBytes(), true);
+            System.out.println(new String(encInfo));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -153,14 +195,14 @@ public class Server implements Runnable {
         int lineNum = 0;
         try {
             for (int i = 0; i < Files.lines(Path.of(INFO_PATH)).count(); i++) {
-                if (FileHandler.getTextFromLine(i, 0, INFO_PATH).equals(username)) {
+                if (FileHandler.getTextFromLine(i, 0, INFO_PATH, encDecFileKey).equals(username)) {
                     lineNum = i + 1;
                     break;
                 }
             }
         }
-        catch (IOException e){
-            System.out.println("!! ERROR OPENING FILE !!");
+        catch (Exception e) {
+            System.out.println("!! ERROR ACESSING FILE !!");
             e.printStackTrace();
         }
         return lineNum;
@@ -172,14 +214,14 @@ public class Server implements Runnable {
      * @param username username of the client whose password shall be found
      * @return password
      */
-    public String getClientPassword(String username) {
+    public String getClientPassword(String username) throws Exception {
         String pass = "";
         int line = searchClientLine(username) - 1;
         if (searchClientLine(username) == 0){
             System.out.println("Couldn't find the client username");
         }
         else {
-            pass = FileHandler.getTextFromLine(line, 1, INFO_PATH);
+            pass = FileHandler.getTextFromLine(line, 1, INFO_PATH, encDecFileKey);
         }
         return pass;
     }
@@ -190,16 +232,16 @@ public class Server implements Runnable {
      * @param username username of the client whose number of requests shall be found
      * @return number of requests
      */
-    public int getClientRequests(String username) {
-        String clientReq = "";
+    public int getClientRequests(String username) throws Exception {
+        int clientReq = 0;
         int line = searchClientLine(username) - 1;
         if (searchClientLine(username) == 0){
             System.out.println("Couldn't find the client username");
         }
         else {
-            clientReq = FileHandler.getTextFromLine(line, 2, INFO_PATH);
+            clientReq = Integer.parseInt(FileHandler.getTextFromLine(line, 2, INFO_PATH, encDecFileKey));
         }
-        return Integer.parseInt(clientReq);
+        return clientReq;
     }
 
     /**
@@ -207,9 +249,13 @@ public class Server implements Runnable {
      *
      */
     public void addRequest(String username) {
-        int req = getClientRequests(username);
-        req++;
-        editClientInfo(username, 2,Integer.toString(req));
+        try {
+            int req = getClientRequests(username);
+            req++;
+            editClientInfo(username, 2,Integer.toString(req));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -225,7 +271,7 @@ public class Server implements Runnable {
             System.out.println("Couldn't find the client username");
         }
         else {
-            FileHandler.editTextFromLine(clientLine, parameter, newContent, INFO_PATH);
+            FileHandler.editTextFromLine(clientLine, parameter, newContent, INFO_PATH, encDecFileKey);
         }
     }
 

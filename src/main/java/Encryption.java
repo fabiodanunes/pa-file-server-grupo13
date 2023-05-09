@@ -1,10 +1,10 @@
-import javax.crypto.Cipher;
+import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.spec.IvParameterSpec;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.security.Key;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
+import java.security.*;
+import java.util.Base64;
 
 public class Encryption {
     /**
@@ -57,9 +57,9 @@ public class Encryption {
 
     /**
      * @param message   the message to be encrypted
-     * @param secretKey the secret key used to encrypt the message
+     * @param secretKey the secret key used to decrypt the message
      *
-     * @return the encrypted message as an array of bytes
+     * @return the decrypted message as an array of bytes
      *
      * @throws Exception when the decryption fails
      */
@@ -74,9 +74,9 @@ public class Encryption {
 
     /**
      * @param message   the message to be decrypted
-     * @param secretKey the secret key used to decrypt the message
+     * @param secretKey the secret key used to encrypt the message
      *
-     * @return the decrypted message as an array of bytes
+     * @return the encrypted message as an array of bytes
      *
      * @throws Exception when the encryption fails
      */
@@ -87,5 +87,23 @@ public class Encryption {
         cipher.init(Cipher.ENCRYPT_MODE, secreteKeySpec);
 
         return cipher.doFinal(message);
+    }
+
+    public static String encrypt(String algorithm, String input, SecretKey key) throws Exception {
+
+        Cipher cipher = Cipher.getInstance(algorithm);
+        cipher.init(Cipher.ENCRYPT_MODE, key);
+        byte[] cipherText = cipher.doFinal(input.getBytes());
+        return Base64.getEncoder()
+                .encodeToString(cipherText);
+    }
+
+    public static String decrypt(String algorithm, String cipherText, SecretKey key) throws Exception {
+
+        Cipher cipher = Cipher.getInstance(algorithm);
+        cipher.init(Cipher.DECRYPT_MODE, key);
+        byte[] plainText = cipher.doFinal(Base64.getDecoder()
+                .decode(cipherText));
+        return new String(plainText);
     }
 }
