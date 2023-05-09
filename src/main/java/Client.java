@@ -183,16 +183,6 @@ public class Client {
 
         DHRSA();
 
-        /* //Gets username and password (new or existing one)
-        System.out.println("Username: ");
-        String username = usrInput.nextLine();
-        System.out.println("Password: ");
-        String password = usrInput.nextLine();
-
-
-        //Concatenates username and password in a string to be sent to the server and sends
-        String msg = username + "|" + password; */
-
         sendMessage(userInfo);
 
         //Receives the server message to check if the authentication succeeded

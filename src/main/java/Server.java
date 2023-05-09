@@ -43,6 +43,15 @@ public class Server implements Runnable {
     }
 
     /**
+     * Gets the secret key of the server
+     *
+     * @return the secret key
+     */
+    public SecretKey getEncDecFileKey(){
+        return encDecFileKey;
+    }
+
+    /**
      * Gets the public RSA key from the server
      *
      * @return the public RSA key
@@ -141,7 +150,7 @@ public class Server implements Runnable {
      */
     public void clientRegister() throws Exception {
         for (int i = 0; i < Files.lines(Path.of(INFO_PATH)).count(); i++) {
-            clients.add(FileHandler.getTextFromLine(i,0,INFO_PATH, encDecFileKey));
+            getClients().add(FileHandler.getTextFromLine(i,0,INFO_PATH, encDecFileKey));
         }
     }
 
@@ -151,7 +160,7 @@ public class Server implements Runnable {
      * @param client username of the new client
      */
     public void newClient(String client, String pass) {
-        clients.add(client);
+        getClients().add(client);
         saveClientInfo(client, pass);
     }
 
@@ -167,7 +176,7 @@ public class Server implements Runnable {
             String encInfo = Encryption.encrypt("AES", info, encDecFileKey);
             encInfo += "\n";
             FileHandler.writeFile(getClientsInfoPath(), encInfo.getBytes(), true);
-            System.out.println(new String(encInfo));
+            System.out.println(encInfo);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -268,7 +277,7 @@ public class Server implements Runnable {
     public void editClientInfo(String username, int parameter, String newContent) {
         int clientLine = searchClientLine(username) - 1;
         if (searchClientLine(username) == 0){
-            System.out.println("Couldn't find the client username");
+            System.out.print("Couldn't find the client username\n");
         }
         else {
             FileHandler.editTextFromLine(clientLine, parameter, newContent, INFO_PATH, encDecFileKey);

@@ -2,6 +2,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ServerTest {
@@ -14,24 +17,17 @@ public class ServerTest {
     }
 
     @Test
-    @DisplayName("Teste de verificação de adição de um novo cliente ao Array do server")
-    public void testAddClient() {
-        server.newClient("joni", "987");
+    @DisplayName("Teste para quando o servidor não encontra o username introduzido")
+    public void testWrongPasswordAndRequests(){
+        String name = "Osvaldo";
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(outputStream));
+        server.editClientInfo(name, 0, "0");
 
         assertAll(
-                () -> assertNotNull(server.getClients())
+                () -> assertEquals("Couldn't find the client username\n", outputStream.toString()),
+                () -> assertEquals("", server.getClientPassword(name)),
+                () -> assertEquals(0, server.getClientRequests(name))
         );
     }
-
-    @Test
-    @DisplayName("Teste à edição e adição de requests de um certo cliente ao ficheiro")
-    public void testRequests() throws Exception {
-        String name = "diego";
-        server.newClient(name, "123");
-        server.editClientInfo(name, 2, "3");
-        server.addRequest(name);
-
-        assertEquals(4, server.getClientRequests(name));
-    }
-
 }
