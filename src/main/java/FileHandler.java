@@ -1,4 +1,5 @@
 import javax.crypto.SecretKey;
+import java.io.*;
 
 /**
  * This class represents the file handler. It has the methods for reading and writing text files.
