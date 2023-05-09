@@ -1,7 +1,5 @@
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
-import javax.crypto.spec.IvParameterSpec;
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.*;
 import java.util.Base64;
@@ -22,7 +20,7 @@ public class Encryption {
     }
 
     /**
-     * encrypts a message using the RSA algorithm
+     * Encrypts a message using the RSA algorithm
      *
      * @param message message to be encrypted
      * @param publicKey the key used in the encryption
@@ -39,7 +37,7 @@ public class Encryption {
     }
 
     /**
-     * decrypts a message using the RSA algorithm
+     * Decrypts a message using the RSA algorithm
      *
      * @param message message to be decrypted
      * @param privateKey the key used in the decryption
@@ -56,6 +54,8 @@ public class Encryption {
     }
 
     /**
+     * Decrypts a message using the AES algorythm
+     *
      * @param message   the message to be encrypted
      * @param secretKey the secret key used to decrypt the message
      *
@@ -73,6 +73,8 @@ public class Encryption {
     }
 
     /**
+     * Encrypts a message using the AES algorythm
+     *
      * @param message   the message to be decrypted
      * @param secretKey the secret key used to encrypt the message
      *
@@ -89,6 +91,16 @@ public class Encryption {
         return cipher.doFinal(message);
     }
 
+    /**
+     * Encrypts an input using any algorithm selected, and using a SecretKey
+     *
+     * @param algorithm algorithm to be used in encryption
+     * @param input string to encrypt
+     * @param key key used to encrypt
+     * @return encrypted content
+     *
+     * @throws Exception when the encryption fails
+     */
     public static String encrypt(String algorithm, String input, SecretKey key) throws Exception {
 
         Cipher cipher = Cipher.getInstance(algorithm);
@@ -97,6 +109,17 @@ public class Encryption {
         return Base64.getEncoder().encodeToString(cipherText);
     }
 
+    /**
+     * Decrypts an input using any algorithm selected, and using a SecretKey
+     *
+     * @param algorithm algorithm to be used in the decryption
+     * @param cipherText encrypted text to be decrypted
+     * @param key key used to decrypt
+     *
+     * @return decrypted test
+     *
+     * @throws Exception when the decryption fails
+     */
     public static String decrypt(String algorithm, String cipherText, SecretKey key) throws Exception {
 
         Cipher cipher = Cipher.getInstance(algorithm);

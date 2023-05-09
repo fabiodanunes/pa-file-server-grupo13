@@ -1,6 +1,4 @@
 import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
-import java.io.*;
 
 /**
  * This class represents the file handler. It has the methods for reading and writing text files.
@@ -50,10 +48,11 @@ public class FileHandler {
     }
 
     /**
-     * Reads a specific line from a file
+     * Reads a specific line from the encrypted file
      *
      * @param line number of the line to be read
      * @param path the path of the file to read
+     * @param key SecretKey used to decrypt the file content
      *
      * @return line requested
      */
@@ -69,6 +68,8 @@ public class FileHandler {
      * @param line line to get the text from
      * @param parameter position of info to get
      * @param path path to the file
+     * @param key SecretKey used to decrypt the content of the file
+     *
      * @return info selected from the line
      */
     public static String getTextFromLine(int line, int parameter, String path, SecretKey key) throws Exception {
@@ -83,11 +84,12 @@ public class FileHandler {
      * @param line line to be changed
      * @param newContent text that substitutes the current line
      * @param path path to the file
+     * @param key SecretKey used to decrypt the content of the file
      */
     public static void editLineFromFile(int line, String newContent, String path, SecretKey key) throws Exception {
         String fileContent = new String(readFile(path));
         String[] lines = fileContent.split("\n");
-        for(int i = 0; i < lines.length; i++){
+        for (int i = 0; i < lines.length; i++) {
             lines[i] = Encryption.decrypt("AES", lines[i], key);
         }
         lines[line] = newContent;
@@ -107,6 +109,7 @@ public class FileHandler {
      * @param parameter position of the info to be changed
      * @param newContent text that substitutes the current line
      * @param path path to the file
+     * @param key SecretKey used to decrypt the content of the file
      */
     public static void editTextFromLine(int line, int parameter, String newContent, String path, SecretKey key) {
         try {
