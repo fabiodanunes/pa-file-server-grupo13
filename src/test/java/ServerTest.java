@@ -16,27 +16,6 @@ public class ServerTest {
         server = new Server(8001);
     }
 
-    /* @Test
-    @DisplayName("Teste de verificação de adição de um novo cliente ao Array do server")
-    public void testAddClient() {
-        server.newClient("joni", "987");
-
-        assertAll(
-                () -> assertNotNull(server.getClients())
-        );
-    }
-
-    @Test
-    @DisplayName("Teste à edição e adição de requests de um certo cliente ao ficheiro")
-    public void testRequests() throws Exception {
-        String name = "diego";
-        server.newClient(name, "123");
-        server.editClientInfo(name, 2, "3");
-        server.addRequest(name);
-
-        assertEquals(4, server.getClientRequests(name));
-    } */
-
     @Test
     @DisplayName("Teste para quando o servidor não encontra o username introduzido")
     public void testWrongPasswordAndRequests(){
