@@ -65,7 +65,7 @@ public class ClientHandler extends Thread {
 
             while ( isConnected ) {
                 if (server.getClientRequests(clientUsername) >= 5){
-                    System.out.println("!!5 Requests made!!\n!!For safety reasons, executing a new handshake!!");
+                    System.out.println("!! 5 REQUESTS MADE -> FOR SAFETY REASONS, EXECUTING A NEW HANDSHAKE !!");
                     sendMessage("newHandshake");
                     DHRSA();
                     server.editClientInfo(clientUsername, 2,"0");
@@ -137,14 +137,25 @@ public class ClientHandler extends Thread {
         out.flush();
     }
 
+
     /**
-     * Checks if the login or register information is valid, by validating the username and password given
+     * Receives the login information sent by the client
      */
-    private void receiveUserInfo() throws Exception {
+    private void receiveUserInfo() throws Exception{
         String msg = new String(DecryptReceivedMessage());
         String[] msgSplitted = msg.split("[|]");
         String username = msgSplitted[0];
         String password = msgSplitted[1];
+        checkLogin(username, password);
+    }
+
+    /**
+     * Checks if the login or register information is valid, by validating the username and password given
+     *
+     * @param username username given by the client
+     * @param password password given by the client
+     */
+    public void checkLogin(String username, String password) throws Exception {
         if(server.searchClientLine(username) != 0){
             String userPass = server.getClientPassword(username);
             if (password.equals(userPass)){

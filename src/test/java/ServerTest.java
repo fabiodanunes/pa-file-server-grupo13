@@ -25,7 +25,7 @@ public class ServerTest {
 
     @Test
     @DisplayName("Teste à edição e adição de requests de um certo cliente ao ficheiro")
-    public void testRequests(){
+    public void testRequests() throws Exception {
         String name = "diego";
         server.newClient(name, "123");
         server.editClientInfo(name, 2, "3");
