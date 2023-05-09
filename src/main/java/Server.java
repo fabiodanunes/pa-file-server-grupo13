@@ -110,6 +110,16 @@ public class Server implements Runnable {
         clientHandler.start ( );
     }
 
+
+    /**
+     * Generates a SecretKey using the AES algorithm
+     *
+     * @param n number of bits
+     *
+     * @return SecretKey generated with AES
+     *
+     * @throws NoSuchAlgorithmException when the algorithm can't be found
+     */
     public static SecretKey generateKey(int n) throws NoSuchAlgorithmException {
         KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
         keyGenerator.init(n);
@@ -118,6 +128,12 @@ public class Server implements Runnable {
     }
 
 
+    /**
+     * Saves the SecretKey used to encrypt and decrypt the file
+     * with the clients information to a file
+     *
+     * @throws Exception when the key file creation fails
+     */
     private void generateAndSaveFileKey() throws Exception {
         KeyStore keyStore = KeyStore.getInstance("JCEKS");
         File keystoreFile = new File("server/infoFileKey.jceks");
@@ -256,6 +272,7 @@ public class Server implements Runnable {
     /**
      * Increases the requests count of the current client
      *
+     * @param username the username of the desired client
      */
     public void addRequest(String username) {
         try {
