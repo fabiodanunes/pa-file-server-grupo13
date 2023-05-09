@@ -87,6 +87,9 @@ public class FileHandler {
     public static void editLineFromFile(int line, String newContent, String path, SecretKey key) throws Exception {
         String fileContent = new String(readFile(path));
         String[] lines = fileContent.split("\n");
+        for(int i = 0; i < lines.length; i++){
+            lines[i] = Encryption.decrypt("AES", lines[i], key);
+        }
         lines[line] = newContent;
         fileContent = "";
         for (String s : lines) {
