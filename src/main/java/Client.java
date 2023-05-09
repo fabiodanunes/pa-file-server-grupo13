@@ -125,6 +125,7 @@ public class Client {
     public void execute ( ) {
         Scanner usrInput = new Scanner ( System.in );
         try {
+            DHRSA();
             while (!authenticate(usrInput));
             PrivateKeyToFile();
             PublicKeyToFile();
@@ -172,16 +173,17 @@ public class Client {
      */
     public boolean authenticate(Scanner usrInput) throws Exception{
         String response;
-        String userInfo = "";
+        String userInfo;
         String[] userInfoSeparated;
 
         System.out.println("Username/Password (Separated by \"|\" please): ");
         userInfo = usrInput.nextLine();
-        if(!userInfo.contains("|")) return false;
         userInfoSeparated = userInfo.split("[|]");
-        if(userInfoSeparated.length < 2 || userInfoSeparated[0].equals("") || userInfoSeparated[1].equals("")) return false;
+        if(!userInfo.contains("|") || userInfoSeparated.length < 2 || userInfoSeparated[0].equals("") || userInfoSeparated[1].equals("")){
+            System.out.println("**WRONG LOGIN FORMAT**");
+            return false;
+        }
 
-        DHRSA();
 
         sendMessage(userInfo);
 

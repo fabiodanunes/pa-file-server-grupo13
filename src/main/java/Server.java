@@ -123,8 +123,7 @@ public class Server implements Runnable {
     public static SecretKey generateKey(int n) throws NoSuchAlgorithmException {
         KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
         keyGenerator.init(n);
-        SecretKey key = keyGenerator.generateKey();
-        return key;
+        return keyGenerator.generateKey();
     }
 
 
@@ -192,7 +191,6 @@ public class Server implements Runnable {
             String encInfo = Encryption.encrypt("AES", info, encDecFileKey);
             encInfo += "\n";
             FileHandler.writeFile(getClientsInfoPath(), encInfo.getBytes(), true);
-            System.out.println(encInfo);
         } catch (Exception e) {
             e.printStackTrace();
         }

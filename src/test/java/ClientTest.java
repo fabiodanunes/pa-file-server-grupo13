@@ -79,6 +79,7 @@ class ClientTest {
         String mockUserInfo = "merces|345";
         InputStream input = new ByteArrayInputStream(mockUserInfo.getBytes());
         System.setIn(input);
+        client.DHRSA();
 
         assertTrue(client.authenticate(new Scanner(System.in)));
     }
@@ -91,6 +92,7 @@ class ClientTest {
         String mockUserInfo1 = "maurilia|909";
         InputStream input1 = new ByteArrayInputStream(mockUserInfo1.getBytes());
         System.setIn(input1);
+        client1.DHRSA();
         client1.authenticate(new Scanner(System.in));
 
         // mesmo nome de utilizador
@@ -98,6 +100,7 @@ class ClientTest {
         String mockUserInfo2 = "maurilia|808";
         InputStream input2 = new ByteArrayInputStream(mockUserInfo2.getBytes());
         System.setIn(input2);
+        client2.DHRSA();
 
         assertFalse(client2.authenticate(new Scanner(System.in)));
     }
